@@ -9,6 +9,7 @@ packages = [{include = "phenotype2phenopacket", from = "src"}]
 [tool.poetry.dependencies]
 python = "^3.10"
 pandas = "^2.0.0"
+phenopackets = "^2.0.2"
 
 
 [build-system]
