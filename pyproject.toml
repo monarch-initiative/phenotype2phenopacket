@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [{ include = "phenotype2phenopacket", from = "src" }]
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = ">=3.9,<4.0"
 pandas = ">=1.5.1,<2.0.0"
 phenopackets = "^2.0.2"
 polars = "^0.17.5"
