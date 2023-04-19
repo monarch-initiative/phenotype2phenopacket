@@ -4,7 +4,7 @@ version = "0.1.0"
 description = ""
 authors = ["Yasemin Bridges <y.bridges@qmul.ac.uk>"]
 readme = "README.md"
-packages = [{include = "phenotype2phenopacket", from = "src"}]
+packages = [{ include = "phenotype2phenopacket", from = "src" }]
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -21,9 +21,12 @@ coverage = "^6.5.0"
 [tool.poetry.group.dev.dependencies]
 black = "^22.12.0"
 
+[tool.poetry.scripts]
+p2p = "phenotype2phenopacket.cli:main"
+
 [tool.pytest.ini_options]
 pythonpath = [
-  "src"
+    "src"
 ]
 
 [tool.black]
