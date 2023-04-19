@@ -1,7 +1,9 @@
 import re
+from collections import defaultdict
 from pathlib import Path
 
 import click
+import pandas as pd
 import polars as pl
 import requests
 from google.protobuf.json_format import MessageToJson
@@ -43,6 +45,49 @@ def write_phenopacket(phenopacket: Phenopacket, output_file: Path) -> None:
     outfile.close()
 
 
+def read_hgnc_data(hgnc_data_file: Path) -> pd.DataFrame:
+    return pd.read_csv(
+        hgnc_data_file,
+        delimiter="\t",
+        dtype=str,
+    )
+
+
+def create_hgnc_dict(hgnc_data_file: Path) -> defaultdict:
+    """Creates reference for updating gene symbols and identifiers."""
+    hgnc_df = read_hgnc_data(hgnc_data_file)
+    hgnc_data = defaultdict(dict)
+    for _index, row in hgnc_df.iterrows():
+        previous_names = []
+        hgnc_data[row["symbol"]]["ensembl_id"] = row["ensembl_gene_id"]
+        hgnc_data[row["symbol"]]["hgnc_id"] = row["hgnc_id"]
+        hgnc_data[row["symbol"]]["entrez_id"] = row["entrez_id"]
+        hgnc_data[row["symbol"]]["refseq_accession"] = row["refseq_accession"]
+        previous = str(row["prev_symbol"]).split("|")
+        for p in previous:
+            previous_names.append(p.strip('"'))
+        hgnc_data[row["symbol"]]["previous_symbol"] = previous_names
+
+    return hgnc_data
+
+
+class GeneIdentifierUpdater:
+    def __init__(self, gene_identifier: str, hgnc_data: dict = None, identifier_map: dict = None):
+        self.hgnc_data = hgnc_data
+        self.gene_identifier = gene_identifier
+        self.identifier_map = identifier_map
+
+    def find_identifier(self, gene_symbol: str) -> str:
+        """Finds the specified gene identifier for a gene symbol."""
+        if gene_symbol in self.hgnc_data.keys():
+            return self.hgnc_data[gene_symbol][self.gene_identifier]
+        else:
+            for _symbol, data in self.hgnc_data.items():
+                for prev_symbol in data["previous_symbol"]:
+                    if prev_symbol == gene_symbol:
+                        return data[self.gene_identifier]
+
+
 def create_phenopacket_file_name_from_disease(disease_name: str) -> Path:
     normalised_string = re.sub(r"\W+", "_", disease_name)
     return Path(normalised_string.replace(" ", "_") + ".json")
@@ -70,9 +115,12 @@ def create_onset(human_phenotype_ontology, phenotype_annotation_entry: dict) -> 
 
 def create_modifier(human_phenotype_ontology, phenotype_annotation_entry: dict) -> [OntologyClass]:
     if phenotype_annotation_entry["modifier"] is not None:
-        rels = human_phenotype_ontology.entity_alias_map(phenotype_annotation_entry["modifier"])
-        term = "".join(rels[(list(rels.keys())[0])])
-        return [OntologyClass(id=phenotype_annotation_entry["modifier"], label=term)]
+        try:
+            rels = human_phenotype_ontology.entity_alias_map(phenotype_annotation_entry["modifier"])
+            term = "".join(rels[(list(rels.keys())[0])])
+            return [OntologyClass(id=phenotype_annotation_entry["modifier"], label=term)]
+        except IndexError:
+            return [OntologyClass(id=phenotype_annotation_entry["modifier"])]
     else:
         return None
 
@@ -151,7 +199,7 @@ def get_genes_from_omim_api(phenotype_annotation_entry: dict) -> [dict]:
 
 
 def convert_phenotype_map_list_to_genomic_interpretation(
-    phenotype_map_list: [dict],
+    phenotype_map_list: [dict], gene_identifier_updator: GeneIdentifierUpdater
 ) -> [GenomicInterpretation]:
     genomic_interpretations = []
     for phenotype_map in phenotype_map_list:
@@ -165,19 +213,26 @@ def convert_phenotype_map_list_to_genomic_interpretation(
                     if phenotype_map["phenotypeMap"]["phenotypeMappingKey"] == 3
                     else 0,
                     gene=GeneDescriptor(
-                        value_id="NONE", symbol=phenotype_map["phenotypeMap"]["approvedGeneSymbols"]
+                        value_id=gene_identifier_updator.find_identifier(
+                            phenotype_map["phenotypeMap"]["approvedGeneSymbols"]
+                        ),
+                        symbol=phenotype_map["phenotypeMap"]["approvedGeneSymbols"],
                     ),
                 )
             )
     return genomic_interpretations
 
 
-def create_interpretations(phenotype_annotation_entry: dict) -> Interpretation:
+def create_interpretations(
+    phenotype_annotation_entry: dict, gene_identifier_updator: GeneIdentifierUpdater
+) -> Interpretation:
     gene_list = get_genes_from_omim_api(phenotype_annotation_entry)
     if gene_list is None:
         return None
     else:
-        genomic_interpretations = convert_phenotype_map_list_to_genomic_interpretation(gene_list)
+        genomic_interpretations = convert_phenotype_map_list_to_genomic_interpretation(
+            gene_list, gene_identifier_updator
+        )
         if not genomic_interpretations:
             return None
         else:
@@ -194,10 +249,16 @@ def create_interpretations(phenotype_annotation_entry: dict) -> Interpretation:
             )
 
 
-def convert_to_phenopackets(phenotype_annotation: pl.DataFrame, output_dir: Path):
+def convert_to_phenopackets(
+    phenotype_annotation: pl.DataFrame, hgnc_data_file: Path, output_dir: Path
+):
     human_phenotype_ontology = load_ontology()
     omim_diseases = phenotype_annotation.filter(pl.col("database_id").str.starts_with("OMIM"))
     grouped_omim_diseases = omim_diseases.partition_by(by="database_id", maintain_order=True)
+    hgnc_dict = create_hgnc_dict(hgnc_data_file)
+    gene_identifier_updator = GeneIdentifierUpdater(
+        gene_identifier="ensembl_id", hgnc_data=hgnc_dict
+    )
     for omim_disease in grouped_omim_diseases:
         phenotypic_features = []
         phenotype_entry = ""
@@ -211,7 +272,7 @@ def convert_to_phenopackets(phenotype_annotation: pl.DataFrame, output_dir: Path
             else:
                 pass
             phenotype_entry = phenotype
-        interpretations = create_interpretations(phenotype_entry)
+        interpretations = create_interpretations(phenotype_entry, gene_identifier_updator)
         phenopacket = Phenopacket(
             id=phenotype_entry["disease_name"].lower().replace(" ", "_"),
             subject=create_individual(),
@@ -237,12 +298,19 @@ def convert_to_phenopackets(phenotype_annotation: pl.DataFrame, output_dir: Path
     type=Path,
 )
 @click.option(
+    "--hgnc-genes",
+    "-h",
+    required=True,
+    help="Path to hgnc data file.",
+    type=Path,
+)
+@click.option(
     "--output-dir",
     "-o",
     required=True,
     help="Path to output directory.",
     type=Path,
 )
-def convert_to_phenopackets_command(phenotype_annotation: Path, output_dir: Path):
+def convert_to_phenopackets_command(phenotype_annotation: Path, hgnc_genes: Path, output_dir: Path):
     phenotype_annotation_df = read_phenotype_annotation_file(phenotype_annotation)
-    convert_to_phenopackets(phenotype_annotation_df, output_dir)
+    convert_to_phenopackets(phenotype_annotation_df, hgnc_genes, output_dir)
