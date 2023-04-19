@@ -3,13 +3,18 @@ from pathlib import Path
 
 import click
 import polars as pl
+import requests
 from google.protobuf.json_format import MessageToJson
 from google.protobuf.timestamp_pb2 import Timestamp
 from oaklib.implementations.pronto.pronto_implementation import ProntoImplementation
 from oaklib.resource import OntologyResource
 from phenopackets import (
+    Diagnosis,
     Disease,
+    GeneDescriptor,
+    GenomicInterpretation,
     Individual,
+    Interpretation,
     MetaData,
     OntologyClass,
     Phenopacket,
@@ -98,6 +103,17 @@ def create_disease(phenotype_annotation_entry: dict) -> Disease:
 
 def create_phenotype_ontology_resource() -> Resource:
     return Resource(
+        id="omim",
+        name="Online Mendelian Inheritance in Man",
+        url="https://www.omim.org",
+        version="hp/releases/2023-04-18",
+        namespace_prefix="OMIM",
+        iri_prefix="https://omim.org/entry/",
+    )
+
+
+def create_omim_resource() -> Resource:
+    return Resource(
         id="hp",
         name="human phenotype ontology",
         url="http://purl.obolibrary.org/obo/hp.owl",
@@ -113,9 +129,69 @@ def create_metadata() -> MetaData:
     return MetaData(
         created=timestamp,
         created_by="phenotype2phenopacket",
-        resources=[create_phenotype_ontology_resource()],
+        resources=[create_phenotype_ontology_resource(), create_omim_resource()],
         phenopacket_schema_version="2.0",
     )
+
+
+def get_genes_from_omim_api(phenotype_annotation_entry: dict) -> [dict]:
+    url = (
+        f"https://api.omim.org/api/entry?mimNumber="
+        f"{phenotype_annotation_entry['database_id'].replace('OMIM:', '')}"
+        f"&format=json&include=geneMap&apiKey=Ec9viXaESlGZTviYKTPUUg"
+    )
+    response = requests.get(url, timeout=60)
+    json_data = response.json()
+    return (
+        json_data["omim"]["entryList"][0]["entry"]["phenotypeMapList"]
+        if "phenotypeMapList"
+        in json_data.get("omim", {}).get("entryList", [{}])[0].get("entry", {})
+        else None
+    )
+
+
+def convert_phenotype_map_list_to_genomic_interpretation(
+    phenotype_map_list: [dict],
+) -> [GenomicInterpretation]:
+    genomic_interpretations = []
+    for phenotype_map in phenotype_map_list:
+        if phenotype_map["phenotypeMap"]["phenotype"].startswith("?"):
+            continue
+        elif "approvedGeneSymbols" in phenotype_map["phenotypeMap"]:
+            genomic_interpretations.append(
+                GenomicInterpretation(
+                    subject_or_biosample_id="patient1",
+                    interpretation_status=4
+                    if phenotype_map["phenotypeMap"]["phenotypeMappingKey"] == 3
+                    else 0,
+                    gene=GeneDescriptor(
+                        value_id="NONE", symbol=phenotype_map["phenotypeMap"]["approvedGeneSymbols"]
+                    ),
+                )
+            )
+    return genomic_interpretations
+
+
+def create_interpretations(phenotype_annotation_entry: dict) -> Interpretation:
+    gene_list = get_genes_from_omim_api(phenotype_annotation_entry)
+    if gene_list is None:
+        return None
+    else:
+        genomic_interpretations = convert_phenotype_map_list_to_genomic_interpretation(gene_list)
+        if not genomic_interpretations:
+            return None
+        else:
+            return Interpretation(
+                id=phenotype_annotation_entry["disease_name"] + "-interpretation",
+                progress_status=0,
+                diagnosis=Diagnosis(
+                    disease=OntologyClass(
+                        id=phenotype_annotation_entry["database_id"],
+                        label=phenotype_annotation_entry["disease_name"],
+                    ),
+                    genomic_interpretations=genomic_interpretations,
+                ),
+            )
 
 
 def convert_to_phenopackets(phenotype_annotation: pl.DataFrame, output_dir: Path):
@@ -135,10 +211,12 @@ def convert_to_phenopackets(phenotype_annotation: pl.DataFrame, output_dir: Path
             else:
                 pass
             phenotype_entry = phenotype
+        interpretations = create_interpretations(phenotype_entry)
         phenopacket = Phenopacket(
             id=phenotype_entry["disease_name"].lower().replace(" ", "_"),
             subject=create_individual(),
             phenotypic_features=phenotypic_features,
+            interpretations=[interpretations] if interpretations is not None else None,
             diseases=[create_disease(phenotype_entry)],
             meta_data=create_metadata(),
         )
