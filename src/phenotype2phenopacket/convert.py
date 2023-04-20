@@ -342,12 +342,22 @@ def convert_to_phenopackets(
             diseases=[create_disease(phenotype_entry)],
             meta_data=create_metadata(),
         )
-        write_phenopacket(
-            phenopacket,
-            output_dir.joinpath(
-                create_phenopacket_file_name_from_disease(phenotype_entry["disease_name"])
-            ),
-        )
+        if phenopacket.interpretations:
+            output_dir.joinpath("g2p_phenopackets").mkdir(exist_ok=True)
+            write_phenopacket(
+                phenopacket,
+                output_dir.joinpath(
+                    f"g2p_phenopackets/{create_phenopacket_file_name_from_disease(phenotype_entry['disease_name'])}"
+                ),
+            )
+        else:
+            output_dir.joinpath("phenopackets").mkdir(exist_ok=True)
+            write_phenopacket(
+                phenopacket,
+                output_dir.joinpath(
+                    f"phenopackets/{create_phenopacket_file_name_from_disease(phenotype_entry['disease_name'])}"
+                ),
+            )
 
 
 @click.command("convert")
