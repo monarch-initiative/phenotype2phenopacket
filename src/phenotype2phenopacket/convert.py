@@ -180,20 +180,25 @@ def convert_phenotype_map_list_to_genomic_interpretation(
         return None
     else:
         for row in omim_disease_phenotype_gene_map.rows(named=True):
-            gene_symbol = gene_identifier_updator.obtain_gene_symbol_from_identifier(
-                str(row["entrez_id"])
-            )
-            genomic_interpretations.append(
-                GenomicInterpretation(
-                    subject_or_biosample_id="patient1",
-                    interpretation_status=4 if row["disease_name"].startswith("?") is False else 0,
-                    gene=GeneDescriptor(
-                        value_id=gene_identifier_updator.find_identifier(gene_symbol),
-                        symbol=gene_symbol,
-                    ),
+            try:
+                gene_symbol = gene_identifier_updator.obtain_gene_symbol_from_identifier(
+                    str(row["entrez_id"])
                 )
-            )
-        return genomic_interpretations
+                genomic_interpretations.append(
+                    GenomicInterpretation(
+                        subject_or_biosample_id="patient1",
+                        interpretation_status=4
+                        if row["disease_name"].startswith("?") is False
+                        else 0,
+                        gene=GeneDescriptor(
+                            value_id=gene_identifier_updator.find_identifier(gene_symbol),
+                            symbol=gene_symbol,
+                        ),
+                    )
+                )
+            except KeyError:
+                print(row)
+    return genomic_interpretations
 
 
 def create_disease(phenotype_annotation_entry: dict) -> Disease:
