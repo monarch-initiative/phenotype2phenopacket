@@ -23,6 +23,13 @@ from phenotype2phenopacket.utils.utils import read_disease_pg, read_variant_summ
     type=Path,
 )
 @click.option(
+    "--hgnc-data",
+    "-h",
+    required=True,
+    help="Path to hgnc_full_set data file.",
+    type=Path,
+)
+@click.option(
     "--clinical-significance-filter",
     "-c",
     required=True,
@@ -47,6 +54,7 @@ from phenotype2phenopacket.utils.utils import read_disease_pg, read_variant_summ
 def add_variants_command(
     phenopacket_dir: Path,
     variant_summary: Path,
+    hgnc_data: Path,
     clinical_significance_filter: str,
     genome_assembly_filter: str,
     output_dir: Path,
@@ -56,6 +64,7 @@ def add_variants_command(
     add_variants_to_directory(
         phenopacket_dir,
         variant_summary_df,
+        hgnc_data,
         int(clinical_significance_filter),
         genome_assembly_filter,
         output_dir,
