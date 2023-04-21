@@ -291,6 +291,9 @@ class PhenopacketInterpretationExtender:
         gene_identifier_updater,
         disease: Disease,
     ):
+        genomic_interpretations = self.create_gene_genomic_interpretations(
+                omim_disease_phenotype_gene_map, gene_identifier_updater
+        )
         return Diagnosis(
             disease=OntologyClass(
                 id=disease.term.id,
@@ -299,7 +302,7 @@ class PhenopacketInterpretationExtender:
             genomic_interpretations=self.create_gene_genomic_interpretations(
                 omim_disease_phenotype_gene_map, gene_identifier_updater
             ),
-        )
+        ) if genomic_interpretations is not None else None
 
     def create_variant_interpretation(self, filtered_variant_summary, gene_identifier_updater):
         phenopacket_util = PhenopacketUtil(self.phenopacket)
@@ -331,22 +334,27 @@ class PhenopacketInterpretationExtender:
     def create_gene_interpretation(self, omim_disease_phenotype_gene_map, gene_identifier_updater):
         phenopacket_util = PhenopacketUtil(self.phenopacket)
         disease = phenopacket_util.return_phenopacket_disease()
+        diagnosis = self.create_gene_diagnosis(
+            omim_disease_phenotype_gene_map, gene_identifier_updater, disease
+        )
         return Interpretation(
             id=disease.term.label + "-interpretation",
             progress_status=0,
-            diagnosis=self.create_gene_diagnosis(
-                omim_disease_phenotype_gene_map, gene_identifier_updater, disease
-            ),
-        )
+            diagnosis=diagnosis,
+        ) if diagnosis is not None else None
 
     def add_variant_interpretation_to_phenopacket(
         self, filtered_variant_summary, gene_identifier_updater
     ):
         phenopacket_copy = copy(self.phenopacket)
-        phenopacket_copy.interpretations.extend(
-            [self.create_variant_interpretation(filtered_variant_summary, gene_identifier_updater)]
-        )
-        return self.add_clinvar_resource(phenopacket_copy)
+        interpretation = self.create_variant_interpretation(filtered_variant_summary, gene_identifier_updater)
+        if interpretation is not None:
+            phenopacket_copy.interpretations.extend(
+                [self.create_variant_interpretation(filtered_variant_summary, gene_identifier_updater)]
+            )
+            return self.add_clinvar_resource(phenopacket_copy)
+        else:
+            pass
 
     def add_gene_interpretation_to_phenopacket(
         self, omim_disease_phenotype_gene_map, gene_identifier_updater
