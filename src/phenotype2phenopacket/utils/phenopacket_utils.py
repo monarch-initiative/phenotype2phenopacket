@@ -299,6 +299,22 @@ class PhenopacketInterpretationExtender:
             diagnosis=self.create_variant_diagnosis(filtered_variant_summary, disease),
         )
 
+    @staticmethod
+    def add_clinvar_resource(phenopacket: Phenopacket):
+        phenopacket.meta_data.resources.extend(
+            [
+                Resource(
+                    id="clinvar",
+                    name="Clinical Variation",
+                    url="https://www.ncbi.nlm.nih.gov/clinvar/",
+                    version="2023-04-06",
+                    namespace_prefix="clinvar",
+                    iri_prefix="https://www.ncbi.nlm.nih.gov/clinvar/variation/",
+                )
+            ]
+        )
+        return phenopacket
+
     def create_gene_interpretation(self, omim_disease_phenotype_gene_map, gene_identifier_updater):
         phenopacket_util = PhenopacketUtil(self.phenopacket)
         disease = phenopacket_util.return_phenopacket_disease()
@@ -315,7 +331,7 @@ class PhenopacketInterpretationExtender:
         phenopacket_copy.interpretations.extend(
             [self.create_variant_interpretation(filtered_variant_summary)]
         )
-        return phenopacket_copy
+        return self.add_clinvar_resource(phenopacket_copy)
 
     def add_gene_interpretation_to_phenopacket(
         self, omim_disease_phenotype_gene_map, gene_identifier_updater
