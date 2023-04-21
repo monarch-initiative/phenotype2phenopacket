@@ -150,7 +150,7 @@ def create_modifier(human_phenotype_ontology, phenotype_annotation_entry: dict) 
 
 
 def create_phenotypic_feature(
-        human_phenotype_ontology, phenotype_annotation_entry: dict
+    human_phenotype_ontology, phenotype_annotation_entry: dict
 ) -> PhenotypicFeature:
     if phenotype_annotation_entry["aspect"] == "P":
         rels = human_phenotype_ontology.entity_alias_map(phenotype_annotation_entry["hpo_id"])
@@ -165,7 +165,7 @@ def create_phenotypic_feature(
 
 
 def get_phenotype_to_disease_entries(
-        omim_disease_pg: pl.DataFrame, phenotype_annotation_entry: dict
+    omim_disease_pg: pl.DataFrame, phenotype_annotation_entry: dict
 ) -> pl.DataFrame:
     return omim_disease_pg.filter(
         pl.col("database_id") == phenotype_annotation_entry["database_id"]
@@ -173,7 +173,7 @@ def get_phenotype_to_disease_entries(
 
 
 def convert_phenotype_map_list_to_genomic_interpretation(
-        omim_disease_phenotype_gene_map: pl.DataFrame, gene_identifier_updator: GeneIdentifierUpdater
+    omim_disease_phenotype_gene_map: pl.DataFrame, gene_identifier_updator: GeneIdentifierUpdater
 ) -> [GenomicInterpretation]:
     genomic_interpretations = []
     if len(omim_disease_phenotype_gene_map) == 0:
@@ -289,9 +289,9 @@ def create_metadata() -> MetaData:
 
 
 def create_interpretations(
-        phenotype_annotation_entry: dict,
-        gene_identifier_updator: GeneIdentifierUpdater,
-        disease_pg: pl.DataFrame,
+    phenotype_annotation_entry: dict,
+    gene_identifier_updator: GeneIdentifierUpdater,
+    disease_pg: pl.DataFrame,
 ) -> Interpretation:
     omim_disease_pg = get_phenotype_to_disease_entries(disease_pg, phenotype_annotation_entry)
     genomic_interpretations = convert_phenotype_map_list_to_genomic_interpretation(
@@ -314,10 +314,10 @@ def create_interpretations(
 
 
 def convert_to_phenopackets(
-        phenotype_annotation: pl.DataFrame,
-        hgnc_data_file: Path,
-        disease_pg_df: pl.DataFrame,
-        output_dir: Path,
+    phenotype_annotation: pl.DataFrame,
+    hgnc_data_file: Path,
+    disease_pg_df: pl.DataFrame,
+    output_dir: Path,
 ):
     human_phenotype_ontology = load_ontology()
     omim_diseases = phenotype_annotation.filter(pl.col("database_id").str.starts_with("OMIM"))
@@ -399,7 +399,7 @@ def convert_to_phenopackets(
     type=Path,
 )
 def convert_to_phenopackets_command(
-        phenotype_annotation: Path, hgnc_genes: Path, disease_pg: Path, output_dir: Path
+    phenotype_annotation: Path, hgnc_genes: Path, disease_pg: Path, output_dir: Path
 ):
     phenotype_annotation_df = read_phenotype_annotation_file(phenotype_annotation)
     disease_pg_df = read_disease_pg(disease_pg)
