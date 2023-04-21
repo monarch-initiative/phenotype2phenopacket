@@ -26,11 +26,11 @@ class ClinicalSignificance(Enum):
 
 class VariantSummaryFilter:
     def __init__(
-            self,
-            variant_summary_df: pl.DataFrame,
-            disease: Disease,
-            clinical_significance_filter: int,
-            genome_assembly_filter: str,
+        self,
+        variant_summary_df: pl.DataFrame,
+        disease: Disease,
+        clinical_significance_filter: int,
+        genome_assembly_filter: str,
     ):
         self.variant_summary_df = variant_summary_df
         self.disease = disease
@@ -81,12 +81,12 @@ class VariantSummaryFilter:
 
 
 def add_variants(
-        phenopacket_path: Path,
-        variant_summary_df: pl.DataFrame,
-        clinical_significance_filter: int,
-        genome_assembly_filter: str,
-        output_dir: Path,
-        gene_identifier_updater
+    phenopacket_path: Path,
+    variant_summary_df: pl.DataFrame,
+    clinical_significance_filter: int,
+    genome_assembly_filter: str,
+    output_dir: Path,
+    gene_identifier_updater,
 ):
     phenopacket = phenopacket_reader(phenopacket_path)
     disease = PhenopacketUtil(phenopacket).return_phenopacket_disease()
@@ -101,19 +101,23 @@ def add_variants(
     else:
         phenopacket_with_variants = PhenopacketInterpretationExtender(
             phenopacket
-        ).add_variant_interpretation_to_phenopacket(filtered_variant_summary, gene_identifier_updater)
+        ).add_variant_interpretation_to_phenopacket(
+            filtered_variant_summary, gene_identifier_updater
+        )
         write_phenopacket(phenopacket_with_variants, output_dir.joinpath(phenopacket_path.name))
 
 
 def add_variants_to_directory(
-        phenopacket_dir: Path,
-        variant_summary_df: pl.DataFrame,
-        hgnc_data: Path,
-        clinical_significance_filter: int,
-        genome_assembly_filter: str,
-        output_dir: Path,
+    phenopacket_dir: Path,
+    variant_summary_df: pl.DataFrame,
+    hgnc_data: Path,
+    clinical_significance_filter: int,
+    genome_assembly_filter: str,
+    output_dir: Path,
 ):
-    gene_identifier_updater = GeneIdentifierUpdater(gene_identifier="ensembl_id", hgnc_data=create_hgnc_dict(hgnc_data))
+    gene_identifier_updater = GeneIdentifierUpdater(
+        gene_identifier="ensembl_id", hgnc_data=create_hgnc_dict(hgnc_data)
+    )
     for file in all_files(phenopacket_dir):
         add_variants(
             file,
@@ -121,5 +125,5 @@ def add_variants_to_directory(
             clinical_significance_filter,
             genome_assembly_filter,
             output_dir,
-            gene_identifier_updater
+            gene_identifier_updater,
         )
