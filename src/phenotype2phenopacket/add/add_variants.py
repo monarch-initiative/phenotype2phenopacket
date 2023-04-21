@@ -24,6 +24,15 @@ from phenotype2phenopacket.utils.phenopacket_utils import write_phenopacket
 from phenotype2phenopacket.utils.utils import all_files, read_variant_summary
 
 
+class ClinicalSignificance(Enum):
+    PATHOGENIC = 5
+    LIKELY_PATHOGENIC = 4
+    UNCERTAIN_SIGNIFICANCE = 3
+    LIKELY_BENIGN = 2
+    BENIGN = 1
+    NOT_PROVIDED = 0
+
+
 class VariantSummaryFilter:
     def __init__(
             self,
@@ -79,15 +88,6 @@ class VariantSummaryFilter:
             return None
         filtered_variants = self.filter_for_clinical_significance(disease_variant_summary)
         return self.filter_for_genome_assembly(filtered_variants)
-
-
-class ClinicalSignificance(Enum):
-    PATHOGENIC = 5
-    LIKELY_PATHOGENIC = 4
-    UNCERTAIN_SIGNIFICANCE = 3
-    LIKELY_BENIGN = 2
-    BENIGN = 1
-    NOT_PROVIDED = 0
 
 
 def return_phenopacket_disease(phenopacket: Phenopacket) -> [str]:
