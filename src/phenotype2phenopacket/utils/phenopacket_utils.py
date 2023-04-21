@@ -250,7 +250,9 @@ class PhenopacketInterpretationExtender:
     def create_variant_genomic_interpretations(self, filtered_variant_summary: pl.DataFrame):
         genomic_interpretations = []
         for variant_entry in filtered_variant_summary.rows(named=True):
-            genomic_interpretations.append(self.add_variant_genomic_interpretation(variant_entry))
+            genomic_interpretation = self.add_variant_genomic_interpretation(variant_entry)
+            if genomic_interpretation is not None:
+                genomic_interpretations.append(genomic_interpretation)
         return genomic_interpretations
 
     def create_gene_genomic_interpretations(
