@@ -52,7 +52,7 @@ class VariantSummaryFilter:
             "Benign": ClinicalSignificance.BENIGN.value,
             "Not provided": ClinicalSignificance.NOT_PROVIDED.value,
         }
-        return mapping.get(clinical_significance, None)
+        return mapping.get(clinical_significance, -1)
 
     def filter_for_clinical_significance(self, filtered_disease_variant_summary):
         mapped_clinical_significance = filtered_disease_variant_summary.select(
@@ -62,8 +62,10 @@ class VariantSummaryFilter:
             ],
             skip_nulls=True,
         )
-
-        return mapped_clinical_significance.filter(
+        removed_unknown_clinical_significance = mapped_clinical_significance.filter(
+            pl.col("ClinicalSignificance") is not None
+        )
+        return removed_unknown_clinical_significance.filter(
             pl.col("ClinicalSignificance") >= self.clinical_significance_filter
         )
 
