@@ -1,26 +1,49 @@
+import json
 import re
+from copy import copy
 from dataclasses import dataclass
 from pathlib import Path
 
 import polars as pl
-from google.protobuf.json_format import MessageToJson
+from google.protobuf.json_format import MessageToJson, Parse
 from google.protobuf.timestamp_pb2 import Timestamp
-from phenopackets import (  # Diagnosis,; GeneDescriptor,; GenomicInterpretation,; Interpretation,
+from phenopackets import (
+    Diagnosis,
     Disease,
+    Family,
+    GeneDescriptor,
+    GenomicInterpretation,
     Individual,
+    Interpretation,
     MetaData,
     OntologyClass,
     Phenopacket,
     PhenotypicFeature,
     Resource,
     TimeElement,
+    VariantInterpretation,
+    VariationDescriptor,
+    VcfRecord,
 )
+
+from phenotype2phenopacket.utils.gene_map_utils import GeneIdentifierUpdater
 
 
 @dataclass
 class PhenopacketFile:
     phenopacket: Phenopacket
     phenopacket_path: Path
+
+
+def phenopacket_reader(file: Path):
+    """Reads a phenopacket file, returning its contents."""
+    file = open(file, "r")
+    phenopacket = json.load(file)
+    file.close()
+    if "proband" in phenopacket:
+        return Parse(json.dumps(phenopacket), Family())
+    else:
+        return Parse(json.dumps(phenopacket), Phenopacket())
 
 
 def create_phenopacket_file_name_from_disease(disease_name: str) -> Path:
@@ -160,3 +183,149 @@ class PhenotypeAnnotationToPhenopacketConverter:
                 phenotype_annotation_entry["disease_name"]
             ),
         )
+
+
+class PhenopacketUtil:
+    def __init__(self, phenopacket: Phenopacket):
+        self.phenopacket = phenopacket
+
+    def return_phenopacket_disease(self) -> [str]:
+        return self.phenopacket.diseases[0]
+
+
+class PhenopacketInterpretationExtender:
+    def __init__(self, phenopacket: Phenopacket):
+        self.phenopacket = phenopacket
+
+    @staticmethod
+    def add_variant_genomic_interpretation(variant_entry: dict):
+        return GenomicInterpretation(
+            subject_or_biosample_id="patient1",
+            interpretation_status=0,
+            variant_interpretation=VariantInterpretation(
+                acmg_pathogenicity_classification=variant_entry["ClinicalSignificance"],
+                variation_descriptor=VariationDescriptor(
+                    id="clinvar:" + str(variant_entry["VariationID"]),
+                    gene_context=GeneDescriptor(
+                        value_id=variant_entry["HGNC_ID"], symbol=variant_entry["GeneSymbol"]
+                    ),
+                    vcf_record=VcfRecord(
+                        genome_assembly=variant_entry["Assembly"],
+                        chrom=variant_entry["Chromosome"],
+                        pos=variant_entry["Start"],
+                        ref=variant_entry["ReferenceAllele"]
+                        if variant_entry["ReferenceAllele"] != "na"
+                        else variant_entry["ReferenceAlleleVCF"],
+                        alt=variant_entry["AlternateAllele"]
+                        if variant_entry["AlternateAllele"] != "na"
+                        else variant_entry["AlternateAlleleVCF"],
+                    ),
+                ),
+            ),
+        )
+
+    @staticmethod
+    def add_gene_genomic_interpretation(
+        gene_to_phenotype_entry: dict, gene_identifier_updater: GeneIdentifierUpdater
+    ):
+        try:
+            gene_symbol = gene_identifier_updater.obtain_gene_symbol_from_identifier(
+                str(gene_to_phenotype_entry["entrez_id"])
+            )
+            return GenomicInterpretation(
+                subject_or_biosample_id="patient1",
+                interpretation_status=4
+                if gene_to_phenotype_entry["disease_name"].startswith("?") is False
+                else 0,
+                gene=GeneDescriptor(
+                    value_id=gene_identifier_updater.find_identifier(gene_symbol),
+                    symbol=gene_symbol,
+                ),
+            )
+        except KeyError:
+            print(f"Unable to find gene_symbol for {gene_to_phenotype_entry['entrez_id']}")
+        except TypeError:
+            print("N/A value", gene_to_phenotype_entry)
+
+    def create_variant_genomic_interpretations(self, filtered_variant_summary: pl.DataFrame):
+        genomic_interpretations = []
+        for variant_entry in filtered_variant_summary.rows(named=True):
+            genomic_interpretations.append(self.add_variant_genomic_interpretation(variant_entry))
+        return genomic_interpretations
+
+    def create_gene_genomic_interpretations(
+        self, omim_disease_phenotype_gene_map, gene_identifier_updater
+    ):
+        genomic_interpretations = []
+        for phenotype_entry in omim_disease_phenotype_gene_map.rows(named=True):
+            genomic_interpretations.append(
+                self.add_gene_genomic_interpretation(phenotype_entry, gene_identifier_updater)
+            )
+        return genomic_interpretations
+
+    def create_variant_diagnosis(self, filtered_variant_summary: pl.DataFrame, disease: Disease):
+        return Diagnosis(
+            disease=OntologyClass(
+                id=disease.term.id,
+                label=disease.term.label,
+            ),
+            genomic_interpretations=self.create_variant_genomic_interpretations(
+                filtered_variant_summary
+            ),
+        )
+
+    def create_gene_diagnosis(
+        self,
+        omim_disease_phenotype_gene_map: pl.DataFrame,
+        gene_identifier_updater,
+        disease: Disease,
+    ):
+        return Diagnosis(
+            disease=OntologyClass(
+                id=disease.term.id,
+                label=disease.term.label,
+            ),
+            genomic_interpretations=self.create_gene_genomic_interpretations(
+                omim_disease_phenotype_gene_map, gene_identifier_updater
+            ),
+        )
+
+    def create_variant_interpretation(self, filtered_variant_summary):
+        phenopacket_util = PhenopacketUtil(self.phenopacket)
+        disease = phenopacket_util.return_phenopacket_disease()
+        return Interpretation(
+            id=disease.term.label + "-interpretation",
+            progress_status=0,
+            diagnosis=self.create_variant_diagnosis(filtered_variant_summary, disease),
+        )
+
+    def create_gene_interpretation(self, omim_disease_phenotype_gene_map, gene_identifier_updater):
+        phenopacket_util = PhenopacketUtil(self.phenopacket)
+        disease = phenopacket_util.return_phenopacket_disease()
+        return Interpretation(
+            id=disease.term.label + "-interpretation",
+            progress_status=0,
+            diagnosis=self.create_gene_diagnosis(
+                omim_disease_phenotype_gene_map, gene_identifier_updater, disease
+            ),
+        )
+
+    def add_variant_interpretation_to_phenopacket(self, filtered_variant_summary):
+        phenopacket_copy = copy(self.phenopacket)
+        phenopacket_copy.interpretations.extend(
+            [self.create_variant_interpretation(filtered_variant_summary)]
+        )
+        return phenopacket_copy
+
+    def add_gene_interpretation_to_phenopacket(
+        self, omim_disease_phenotype_gene_map, gene_identifier_updater
+    ):
+        phenopacket_copy = copy(self.phenopacket)
+        phenopacket_copy.interpretations.extend(
+            [
+                self.create_gene_interpretation(
+                    omim_disease_phenotype_gene_map, gene_identifier_updater
+                )
+            ]
+        )
+        return phenopacket_copy
