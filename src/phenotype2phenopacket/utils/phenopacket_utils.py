@@ -3,11 +3,14 @@ import re
 from copy import copy
 from dataclasses import dataclass
 from pathlib import Path
+import random
+from typing import Union
 
 import polars as pl
 from google.protobuf.json_format import MessageToJson, Parse
 from google.protobuf.timestamp_pb2 import Timestamp
 from phenopackets import (
+    Age,
     Diagnosis,
     Disease,
     Family,
@@ -27,6 +30,37 @@ from phenopackets import (
 )
 
 from phenotype2phenopacket.utils.gene_map_utils import GeneIdentifierUpdater
+
+
+@dataclass
+class OnsetTerm:
+    lower_age: Union[int, str]
+    upper_age: Union[int, str]
+
+
+onset_hpo = {
+    "HP:0011462": OnsetTerm(16, 40),
+    "HP:0011460": OnsetTerm(0, 0.019230769230769232),
+    "HP:0011463": OnsetTerm(1, 5),
+    "HP:0003584": OnsetTerm(60, 90),
+    "HP:0025709": OnsetTerm(19, 25),
+    "HP:0034198": OnsetTerm(0, 0.019230769230769232),
+    "HP:0003596": OnsetTerm(40, 60),
+    "HP:0003621": OnsetTerm(5, 15),
+    "HP:0003593": OnsetTerm(0, 1),
+    "HP:4000040": OnsetTerm(0, 0),
+    "HP:0011461": OnsetTerm(0, 0.019230769230769232),
+    "HP:0003577": OnsetTerm(0, 0),
+    "HP:0034197": OnsetTerm(0, 0.019230769230769232),
+    "HP:0025708": OnsetTerm(16, 19),
+    "HP:0410280": OnsetTerm(1, 15),
+    "HP:0030674": OnsetTerm(0, 0.019230769230769232),
+    "HP:0003623": OnsetTerm(0, 0.019230769230769232),
+    "HP:0034199": OnsetTerm(0, 0.019230769230769232),
+    "HP:0003581": OnsetTerm(16, 80),
+    "HP:0025710": OnsetTerm(25, 40),
+
+}
 
 
 @dataclass
@@ -69,9 +103,13 @@ class PhenotypeAnnotationToPhenopacketConverter:
         self.human_phenotype_ontology = human_phenotype_ontology
 
     @staticmethod
-    def create_individual() -> Individual:
+    def create_individual(onset_range: OnsetTerm = None) -> Individual:
         """Create an Individual object."""
-        return Individual(id="patient1")
+        age = random.randint(onset_range.lower_age, onset_range.upper_age) if onset_range is not None else None
+        if onset_range.upper_age == 0 and onset_range.lower_age == 0:
+            age = None
+        return Individual(id="patient1", time_at_last_encounter=TimeElement(
+            age=Age(iso8601duration=f"P{age}Y")) if age is not None else None)
 
     def create_onset(self, phenotype_annotation_entry: dict) -> TimeElement:
         """Create an Onset object."""
@@ -111,6 +149,7 @@ class PhenotypeAnnotationToPhenopacketConverter:
                 type=OntologyClass(id=phenotype_annotation_entry["hpo_id"], label=hpo_term),
                 onset=self.create_onset(phenotype_annotation_entry),
                 modifiers=self.create_modifier(phenotype_annotation_entry),
+                excluded=True if phenotype_annotation_entry["qualifier"] == "NOT" else False
             )
         else:
             return None
@@ -163,7 +202,7 @@ class PhenotypeAnnotationToPhenopacketConverter:
             phenopacket_schema_version="2.0",
         )
 
-    def create_phenopacket(self, omim_disease_df: pl.DataFrame) -> PhenopacketFile:
+    def create_phenopacket(self, omim_disease_df: pl.DataFrame, onset: OnsetTerm = None) -> PhenopacketFile:
         phenotypic_features = []
         phenotype_annotation_entry = ""
         for phenotype_annotation_entry in omim_disease_df.rows(named=True):
@@ -174,7 +213,7 @@ class PhenotypeAnnotationToPhenopacketConverter:
         return PhenopacketFile(
             phenopacket=Phenopacket(
                 id=phenotype_annotation_entry["disease_name"].lower().replace(" ", "_"),
-                subject=self.create_individual(),
+                subject=self.create_individual(onset),
                 phenotypic_features=phenotypic_features,
                 diseases=[self.create_disease(phenotype_annotation_entry)],
                 meta_data=self.create_metadata(),
@@ -199,37 +238,44 @@ class PhenopacketInterpretationExtender:
 
     @staticmethod
     def add_variant_genomic_interpretation(variant_entry: dict, gene_identifier_updater):
-        return GenomicInterpretation(
-            subject_or_biosample_id="patient1",
-            interpretation_status=0,
-            variant_interpretation=VariantInterpretation(
-                acmg_pathogenicity_classification=variant_entry["ClinicalSignificance"],
-                variation_descriptor=VariationDescriptor(
-                    id="clinvar:" + str(variant_entry["VariationID"]),
-                    gene_context=GeneDescriptor(
-                        value_id=gene_identifier_updater.find_identifier(
-                            variant_entry["GeneSymbol"]
+        try:
+            return GenomicInterpretation(
+                subject_or_biosample_id="patient1",
+                interpretation_status=0,
+                variant_interpretation=VariantInterpretation(
+                    acmg_pathogenicity_classification=variant_entry["ClinicalSignificance"],
+                    variation_descriptor=VariationDescriptor(
+                        id="clinvar:" + str(variant_entry["VariationID"]),
+                        gene_context=GeneDescriptor(
+                            value_id=gene_identifier_updater.find_identifier(
+                                variant_entry["GeneSymbol"]
+                            ),
+                            symbol=variant_entry["GeneSymbol"],
                         ),
-                        symbol=variant_entry["GeneSymbol"],
-                    ),
-                    vcf_record=VcfRecord(
-                        genome_assembly=variant_entry["Assembly"],
-                        chrom=variant_entry["Chromosome"],
-                        pos=variant_entry["Start"],
-                        ref=variant_entry["ReferenceAllele"]
-                        if variant_entry["ReferenceAllele"] != "na"
-                        else variant_entry["ReferenceAlleleVCF"],
-                        alt=variant_entry["AlternateAllele"]
-                        if variant_entry["AlternateAllele"] != "na"
-                        else variant_entry["AlternateAlleleVCF"],
+                        vcf_record=VcfRecord(
+                            genome_assembly=variant_entry["Assembly"],
+                            chrom=variant_entry["Chromosome"],
+                            pos=variant_entry["Start"],
+                            ref=variant_entry["ReferenceAllele"]
+                            if variant_entry["ReferenceAllele"] != "na"
+                            else variant_entry["ReferenceAlleleVCF"],
+                            alt=variant_entry["AlternateAllele"]
+                            if variant_entry["AlternateAllele"] != "na"
+                            else variant_entry["AlternateAlleleVCF"],
+                        ),
                     ),
                 ),
-            ),
-        )
+            )
+        except TypeError:
+            print("N/A value", variant_entry)
+            return None
+        except KeyError:
+            print(f"Unable to find gene_symbol for {variant_entry['entrez_id']}")
+            return None
 
     @staticmethod
     def add_gene_genomic_interpretation(
-        gene_to_phenotype_entry: dict, gene_identifier_updater: GeneIdentifierUpdater
+            gene_to_phenotype_entry: dict, gene_identifier_updater: GeneIdentifierUpdater
     ):
         try:
             gene_symbol = gene_identifier_updater.obtain_gene_symbol_from_identifier(
@@ -253,7 +299,7 @@ class PhenopacketInterpretationExtender:
             return None
 
     def create_variant_genomic_interpretations(
-        self, filtered_variant_summary: pl.DataFrame, gene_identifier_updater
+            self, filtered_variant_summary: pl.DataFrame, gene_identifier_updater
     ):
         genomic_interpretations = []
         for variant_entry in filtered_variant_summary.rows(named=True):
@@ -265,7 +311,7 @@ class PhenopacketInterpretationExtender:
         return genomic_interpretations
 
     def create_gene_genomic_interpretations(
-        self, omim_disease_phenotype_gene_map, gene_identifier_updater
+            self, omim_disease_phenotype_gene_map, gene_identifier_updater
     ):
         genomic_interpretations = []
         for phenotype_entry in omim_disease_phenotype_gene_map.rows(named=True):
@@ -277,7 +323,7 @@ class PhenopacketInterpretationExtender:
         return genomic_interpretations
 
     def create_variant_diagnosis(
-        self, filtered_variant_summary: pl.DataFrame, disease: Disease, gene_identifier_updater
+            self, filtered_variant_summary: pl.DataFrame, disease: Disease, gene_identifier_updater
     ):
         return Diagnosis(
             disease=OntologyClass(
@@ -290,10 +336,10 @@ class PhenopacketInterpretationExtender:
         )
 
     def create_gene_diagnosis(
-        self,
-        omim_disease_phenotype_gene_map: pl.DataFrame,
-        gene_identifier_updater,
-        disease: Disease,
+            self,
+            omim_disease_phenotype_gene_map: pl.DataFrame,
+            gene_identifier_updater,
+            disease: Disease,
     ):
         genomic_interpretations = self.create_gene_genomic_interpretations(
             omim_disease_phenotype_gene_map, gene_identifier_updater
@@ -354,7 +400,7 @@ class PhenopacketInterpretationExtender:
         )
 
     def add_variant_interpretation_to_phenopacket(
-        self, filtered_variant_summary, gene_identifier_updater
+            self, filtered_variant_summary, gene_identifier_updater
     ):
         phenopacket_copy = copy(self.phenopacket)
         interpretation = self.create_variant_interpretation(
@@ -373,7 +419,7 @@ class PhenopacketInterpretationExtender:
             pass
 
     def add_gene_interpretation_to_phenopacket(
-        self, omim_disease_phenotype_gene_map, gene_identifier_updater
+            self, omim_disease_phenotype_gene_map, gene_identifier_updater
     ):
         phenopacket_copy = copy(self.phenopacket)
         interpretations = [
