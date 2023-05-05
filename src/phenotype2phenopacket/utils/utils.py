@@ -4,6 +4,7 @@ import pandas as pd
 import polars as pl
 from oaklib import OntologyResource
 from oaklib.implementations import ProntoImplementation
+from ontobio import OntologyFactory
 
 
 def is_float(element: any) -> bool:
@@ -27,6 +28,12 @@ def load_ontology():
     """Load human phenotype ontology."""
     resource = OntologyResource(slug="hp.obo", local=False)
     return ProntoImplementation(resource)
+
+
+def load_ontology_factory():
+    """Load human phenotype ontology factory."""
+    ontology_factory = OntologyFactory()
+    return ontology_factory.create("hp")
 
 
 def read_hgnc_data(hgnc_data_file: Path) -> pd.DataFrame:
