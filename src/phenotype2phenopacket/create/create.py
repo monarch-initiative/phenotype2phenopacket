@@ -1,17 +1,19 @@
 import random
+import secrets
 from dataclasses import dataclass
 from fractions import Fraction
 from pathlib import Path
+from typing import Union
 
 import polars as pl
 
-from typing import Union
-
 from phenotype2phenopacket.utils.phenopacket_utils import (
-    write_phenopacket, PhenotypeAnnotationToPhenopacketConverter,
-    onset_hpo, OnsetTerm
+    OnsetTerm,
+    PhenotypeAnnotationToPhenopacketConverter,
+    onset_hpo,
+    write_phenopacket,
 )
-from phenotype2phenopacket.utils.utils import load_ontology, is_float
+from phenotype2phenopacket.utils.utils import is_float, load_ontology
 
 
 @dataclass
@@ -30,9 +32,6 @@ frequency_hpo = {
 }
 
 
-
-
-
 class SyntheticPatientGenerator:
     def __init__(self, disease_df: pl.DataFrame, ontology):
         self.disease_df = disease_df
@@ -40,12 +39,13 @@ class SyntheticPatientGenerator:
         self.lower_age = 0
         self.upper_age = 0
         self.filtered_df = []
+        self.secret_rand = secrets.SystemRandom()
 
     def get_number_of_terms(self):
         """Get number of terms to ascribe from full set."""
         if len(self.disease_df) == 1:
             return 1
-        return int(len(self.disease_df) * (random.uniform(0.2, 0.75)))
+        return int(len(self.disease_df) * (self.secret_rand.uniform(0.2, 0.75)))
 
     @staticmethod
     def shuffle_dataframe(disease_df):
@@ -57,7 +57,7 @@ class SyntheticPatientGenerator:
         updated_df = []
         for row in self.disease_df.rows(named=True):
             if row["frequency"] is None:
-                synthetic_frequency = random.uniform(0, 1)
+                synthetic_frequency = self.secret_rand.uniform(0, 1)
                 row["frequency"] = synthetic_frequency
                 updated_df.append(row)
             elif row["frequency"] is not None:
@@ -77,9 +77,11 @@ class SyntheticPatientGenerator:
     def check_hpo_frequency(self, phenotype_entry):
         """Filter with HPO defined frequencies."""
         frequency_limits = frequency_hpo[phenotype_entry["frequency"]]
-        random_frequency = random.uniform(0, 100)
-        if float(frequency_limits.lower) < random_frequency < float(
-                frequency_limits.upper) and phenotype_entry not in self.filtered_df:
+        random_frequency = self.secret_rand.uniform(0, 100)
+        if (
+            float(frequency_limits.lower) < random_frequency < float(frequency_limits.upper)
+            and phenotype_entry not in self.filtered_df
+        ):
             self.filtered_df.append(phenotype_entry)
 
     def check_frequency_threshold(self, frequency, phenotype_entry, random_frequency):
@@ -92,17 +94,17 @@ class SyntheticPatientGenerator:
     def check_percentage_frequency(self, phenotype_entry):
         """Filter with percentage frequency."""
         frequency = phenotype_entry["frequency"].strip("%")
-        random_frequency = random.uniform(0, 100)
+        random_frequency = self.secret_rand.uniform(0, 100)
         self.check_frequency_threshold(frequency, phenotype_entry, random_frequency)
 
     def check_fraction_frequency(self, phenotype_entry):
         """Filter with fraction frequency."""
-        random_frequency = random.uniform(0, 1)
+        random_frequency = self.secret_rand.uniform(0, 1)
         frequency = float(Fraction(phenotype_entry["frequency"]))
         self.check_frequency_threshold(frequency, phenotype_entry, random_frequency)
 
     def check_float_frequency(self, phenotype_entry):
-        random_frequency = random.uniform(0, 1)
+        random_frequency = self.secret_rand.uniform(0, 1)
         frequency = float((phenotype_entry["frequency"]))
         self.check_frequency_threshold(frequency, phenotype_entry, random_frequency)
 
@@ -128,23 +130,21 @@ class SyntheticPatientGenerator:
 
     def get_patient_terms(self):
         """Get patient terms, filtered on frequency thresholds."""
-        return self.filter_phenotype_entries(self.shuffle_dataframe(self.add_frequency()),
-                                             self.get_number_of_terms())
+        return self.filter_phenotype_entries(
+            self.shuffle_dataframe(self.add_frequency()), self.get_number_of_terms()
+        )
 
-    @staticmethod
-    def get_number_of_terms_to_randomise(patient_terms: pl.DataFrame):
+    def get_number_of_terms_to_randomise(self, patient_terms: pl.DataFrame):
         """Get number of terms to randomise from filtered frequency set."""
-        return random.randint(0, int(len(patient_terms)))
+        return self.secret_rand.randint(0, int(len(patient_terms)))
 
-    @staticmethod
-    def get_number_of_steps_for_randomisation():
+    def get_number_of_steps_for_randomisation(self):
         """Get the number of steps to take in range 1-5 for making a term more/less specific."""
-        return random.randint(1, 5)
+        return self.secret_rand.randint(1, 5)
 
-    @staticmethod
-    def return_less_or_more_specific():
+    def return_less_or_more_specific(self):
         """Generate a float between 0-1."""
-        return random.random()
+        return self.secret_rand.random()
 
     def subsample_patient_terms(self, patient_terms: pl.dataframe):
         """Get a subsample of patient terms to make more/less specific."""
@@ -153,9 +153,9 @@ class SyntheticPatientGenerator:
     def get_children_of_term(self, phenotype_entry: dict, steps: int):
         """Get a child term of a hpo id from the number of steps specified."""
         term_id = phenotype_entry["hpo_id"]
-        for i in range(steps):
+        for _i in range(steps):
             descendants = self.ontology.descendants(phenotype_entry["hpo_id"])
-            descendant = random.choice(list(descendants))
+            descendant = self.secret_rand.choice(list(descendants))
             term_id = descendant
         phenotype_entry["hpo_id"] = term_id
         return phenotype_entry
@@ -163,14 +163,12 @@ class SyntheticPatientGenerator:
     def get_parents_of_terms(self, phenotype_entry: dict, steps: int):
         """Get a parent term of a hpo id from the number of steps specified."""
         term_id = phenotype_entry["hpo_id"]
-        for i in range(steps):
+        for _i in range(steps):
             parents = self.ontology.hierarchical_parents(term_id)
-            parent = random.choice(parents)
-            rels = self.ontology.entity_alias_map(
-                parent
-            )
+            parent = self.secret_rand.choice(parents)
+            rels = self.ontology.entity_alias_map(parent)
             term = "".join(rels[(list(rels.keys())[0])])
-            if term.startswith("Abnormality of") or term_id == 'HP:0000118':
+            if term.startswith("Abnormality of") or term_id == "HP:0000118":
                 break
             else:
                 term_id = parent
@@ -190,10 +188,16 @@ class SyntheticPatientGenerator:
         otherwise the term is made more specific."""
         if self.return_less_or_more_specific() < 0.5:
             new_phenotype_terms.append(
-                self.get_parents_of_terms(phenotype_entry, self.get_number_of_steps_for_randomisation()))
+                self.get_parents_of_terms(
+                    phenotype_entry, self.get_number_of_steps_for_randomisation()
+                )
+            )
         else:
             new_phenotype_terms.append(
-                self.get_children_of_term(phenotype_entry, self.get_number_of_steps_for_randomisation()))
+                self.get_children_of_term(
+                    phenotype_entry, self.get_number_of_steps_for_randomisation()
+                )
+            )
 
     def patient_term_annotation_set(self):
         """Get the final patient term annotation set."""
@@ -204,7 +208,9 @@ class SyntheticPatientGenerator:
         new_phenotype_terms = []
         for phenotype_entry in patient_terms_sub_sample.rows(named=True):
             self.alter_term_specificity(new_phenotype_terms, phenotype_entry)
-        patient_terms_filtered = self.remove_terms_to_be_randomised(patient_terms, patient_terms_sub_sample)
+        patient_terms_filtered = self.remove_terms_to_be_randomised(
+            patient_terms, patient_terms_sub_sample
+        )
         final_patient_terms = patient_terms_filtered.to_dicts() + new_phenotype_terms
         return pl.from_dicts(final_patient_terms)
 
@@ -214,18 +220,25 @@ class SyntheticPatientGenerator:
 # 3. then pick the entries, checking it doesn't exceed things
 # 4. then do an onset from those terms/ or do that straight away
 
-def create_synthetic_patient(phenotype_annotation: pl.DataFrame, num_disease: int, output_dir: Path):
+
+def create_synthetic_patient(
+    phenotype_annotation: pl.DataFrame, num_disease: int, output_dir: Path
+):
     human_phenotype_ontology = load_ontology()
-    omim_diseases = phenotype_annotation.filter(pl.col("database_id").str.starts_with("OMIM")).filter(
-        pl.col("aspect") == "P")
+    omim_diseases = phenotype_annotation.filter(
+        pl.col("database_id").str.starts_with("OMIM")
+    ).filter(pl.col("aspect") == "P")
     grouped_omim_diseases = omim_diseases.partition_by(by="database_id", maintain_order=True)
     if num_disease != 0:
         grouped_omim_diseases = random.sample(grouped_omim_diseases, num_disease)
     for omim_disease in grouped_omim_diseases:
-        synthetic_patient_generator = SyntheticPatientGenerator(omim_disease, human_phenotype_ontology)
+        synthetic_patient_generator = SyntheticPatientGenerator(
+            omim_disease, human_phenotype_ontology
+        )
         patient_terms = synthetic_patient_generator.patient_term_annotation_set()
         phenopacket_file = PhenotypeAnnotationToPhenopacketConverter(
             human_phenotype_ontology
         ).create_phenopacket(patient_terms, synthetic_patient_generator.get_onset_range())
         write_phenopacket(
-            phenopacket_file.phenopacket, output_dir.joinpath(phenopacket_file.phenopacket_path))
+            phenopacket_file.phenopacket, output_dir.joinpath(phenopacket_file.phenopacket_path)
+        )
