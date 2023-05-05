@@ -5,16 +5,19 @@ import polars as pl
 
 from phenotype2phenopacket.utils.phenopacket_utils import (
     PhenotypeAnnotationToPhenopacketConverter,
-    write_phenopacket, SyntheticPatientGenerator,
+    SyntheticPatientGenerator,
+    write_phenopacket,
 )
-from phenotype2phenopacket.utils.utils import load_ontology
+from phenotype2phenopacket.utils.utils import load_ontology, load_ontology_factory
 
 
 def create_synthetic_patient_phenopacket(
-    human_phenotype_ontology, omim_disease: pl.DataFrame, output_dir: Path
+    human_phenotype_ontology, omim_disease: pl.DataFrame, ontology_factory, output_dir: Path
 ):
     """Create a synthetic patient phenopacket from a set of phenotype entries for a specific OMIM disease."""
-    synthetic_patient_generator = SyntheticPatientGenerator(omim_disease, human_phenotype_ontology)
+    synthetic_patient_generator = SyntheticPatientGenerator(
+        omim_disease, human_phenotype_ontology, ontology_factory
+    )
     patient_terms = synthetic_patient_generator.patient_term_annotation_set()
     phenopacket_file = PhenotypeAnnotationToPhenopacketConverter(
         human_phenotype_ontology
@@ -29,6 +32,7 @@ def create_synthetic_patients(
 ):
     """Create a set of synthetic patient phenopackets from a phenotype annotation file."""
     human_phenotype_ontology = load_ontology()
+    ontology_factory = load_ontology_factory()
     omim_diseases = phenotype_annotation.filter(
         pl.col("database_id").str.starts_with("OMIM")
     ).filter(pl.col("aspect") == "P")
@@ -36,4 +40,6 @@ def create_synthetic_patients(
     if num_disease != 0:
         grouped_omim_diseases = random.sample(grouped_omim_diseases, num_disease)
     for omim_disease in grouped_omim_diseases:
-        create_synthetic_patient_phenopacket(human_phenotype_ontology, omim_disease, output_dir)
+        create_synthetic_patient_phenopacket(
+            human_phenotype_ontology, omim_disease, ontology_factory, output_dir
+        )
