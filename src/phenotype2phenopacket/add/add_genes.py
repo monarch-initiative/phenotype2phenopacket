@@ -20,10 +20,17 @@ from phenotype2phenopacket.utils.utils import all_files
 def get_phenotype_to_disease_entries(
     omim_disease_pg: pl.DataFrame, disease: Disease
 ) -> pl.DataFrame:
+    """Return disease.pg entries that match the OMIM disease ID."""
     return omim_disease_pg.filter(pl.col("database_id") == disease.term.id)
 
 
-def add_genes(phenopacket_path: Path, disease_pg, gene_identifier_updater, output_dir):
+def add_genes(
+    phenopacket_path: Path,
+    disease_pg: pl.DataFrame,
+    gene_identifier_updater: GeneIdentifierUpdater,
+    output_dir: Path,
+):
+    """Add known gene to phenotype relationships to the interpretations of a phenopacket."""
     phenopacket = phenopacket_reader(phenopacket_path)
     disease = PhenopacketUtil(phenopacket).return_phenopacket_disease()
     filtered_disease_pg = get_phenotype_to_disease_entries(disease_pg, disease)
@@ -41,7 +48,10 @@ def add_genes(phenopacket_path: Path, disease_pg, gene_identifier_updater, outpu
         ) if phenopacket_with_genes is not None else None
 
 
-def add_genes_to_directory(phenopacket_dir: Path, disease_pg, hgnc_data_file, output_dir):
+def add_genes_to_directory(
+    phenopacket_dir: Path, disease_pg: pl.DataFrame, hgnc_data_file: Path, output_dir: Path
+):
+    """Add known gene to phenotype relationships to the interpretations of a directory phenopackets."""
     hgnc_dict = create_hgnc_dict(hgnc_data_file)
     identifier_map = create_gene_identifier_map(hgnc_data_file)
     gene_identifier_updater = GeneIdentifierUpdater(
