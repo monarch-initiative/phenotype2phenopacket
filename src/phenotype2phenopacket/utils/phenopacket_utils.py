@@ -32,6 +32,22 @@ from phenotype2phenopacket.utils.utils import is_float
 
 
 @dataclass
+class FrequencyTerm:
+    lower: Union[int, str]
+    upper: Union[int, str]
+
+
+frequency_hpo = {
+    "HP:0040281": FrequencyTerm(0, 0),
+    "HP:0040282": FrequencyTerm(1, 4),
+    "HP:0040283": FrequencyTerm(5, 29),
+    "HP:0040284": FrequencyTerm(30, 79),
+    "HP:0040285": FrequencyTerm(80, 99),
+    "HP:0040286": FrequencyTerm(100, 100),
+}
+
+
+@dataclass
 class OnsetTerm:
     lower_age: Union[int, str]
     upper_age: Union[int, str]
@@ -233,6 +249,10 @@ class SyntheticPatientGenerator:
     def get_parents_of_terms(self, phenotype_entry: dict, steps: int):
         """Get a parent term of a hpo id from the number of steps specified."""
         term_id = phenotype_entry["hpo_id"]
+        rels = self.ontology.entity_alias_map(term_id)
+        term = "".join(rels[(list(rels.keys())[0])])
+        if term.startswith("Abnormality of"):
+            return phenotype_entry
         for _i in range(steps):
             parents = self.ontology.hierarchical_parents(term_id)
             parent = self.secret_rand.choice(parents)
@@ -531,19 +551,3 @@ class PhenopacketInterpretationExtender:
         if interpretations is not None:
             phenopacket_copy.interpretations.extend(interpretations)
             return phenopacket_copy
-
-
-@dataclass
-class FrequencyTerm:
-    lower: Union[int, str]
-    upper: Union[int, str]
-
-
-frequency_hpo = {
-    "HP:0040281": FrequencyTerm(0, 0),
-    "HP:0040282": FrequencyTerm(1, 4),
-    "HP:0040283": FrequencyTerm(5, 29),
-    "HP:0040284": FrequencyTerm(30, 79),
-    "HP:0040285": FrequencyTerm(80, 99),
-    "HP:0040286": FrequencyTerm(100, 100),
-}
