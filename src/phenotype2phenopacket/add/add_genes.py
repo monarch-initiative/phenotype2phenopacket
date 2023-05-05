@@ -28,7 +28,7 @@ def add_genes(phenopacket_path: Path, disease_pg, gene_identifier_updater, outpu
     disease = PhenopacketUtil(phenopacket).return_phenopacket_disease()
     filtered_disease_pg = get_phenotype_to_disease_entries(disease_pg, disease)
     if len(filtered_disease_pg) == 0:
-        print("No disease matches")
+        print(f"No gene-to-phenotype matches: {disease.term.id}, {disease.term.label}")
     else:
         phenopacket_with_genes = PhenopacketInterpretationExtender(
             phenopacket
