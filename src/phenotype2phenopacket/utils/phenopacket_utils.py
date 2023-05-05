@@ -97,9 +97,10 @@ def write_phenopacket(phenopacket: Phenopacket, output_file: Path) -> None:
 
 
 class SyntheticPatientGenerator:
-    def __init__(self, disease_df: pl.DataFrame, ontology):
+    def __init__(self, disease_df: pl.DataFrame, ontology, ontology_factory):
         self.disease_df = disease_df
         self.ontology = ontology
+        self.ontology_factory = ontology_factory
         self.lower_age = 0
         self.upper_age = 0
         self.filtered_df = []
@@ -221,9 +222,11 @@ class SyntheticPatientGenerator:
         """Get a child term of a hpo id from the number of steps specified."""
         term_id = phenotype_entry["hpo_id"]
         for _i in range(steps):
-            descendants = self.ontology.descendants(phenotype_entry["hpo_id"])
-            descendant = self.secret_rand.choice(list(descendants))
-            term_id = descendant
+            descendants = self.ontology_factory.children(term_id)
+            if descendants:
+                term_id = self.secret_rand.choice(descendants)
+            else:
+                break
         phenotype_entry["hpo_id"] = term_id
         return phenotype_entry
 
