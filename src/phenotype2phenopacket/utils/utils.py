@@ -6,6 +6,16 @@ from oaklib import OntologyResource
 from oaklib.implementations import ProntoImplementation
 
 
+def is_float(element: any) -> bool:
+    if element is None:
+        return False
+    try:
+        float(element)
+        return True
+    except ValueError:
+        return False
+
+
 def read_disease_pg(disease_pg: Path) -> pl.DataFrame:
     """Read a disease.pg file, returning a polars dataframe."""
     disease = pl.read_csv(disease_pg, separator="|")
