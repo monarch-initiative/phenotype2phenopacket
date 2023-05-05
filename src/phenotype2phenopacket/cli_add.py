@@ -36,10 +36,10 @@ from phenotype2phenopacket.utils.utils import read_disease_pg
     type=Path,
 )
 def add_genes_command(
-        phenopacket_dir: Path,
-        disease_pg: Path,
-        hgnc_data: Path,
-        output_dir: Path,
+    phenopacket_dir: Path,
+    disease_pg: Path,
+    hgnc_data: Path,
+    output_dir: Path,
 ):
     output_dir.mkdir(exist_ok=True)
     disease_pg_df = read_disease_pg(disease_pg)
