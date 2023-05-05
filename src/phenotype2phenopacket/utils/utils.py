@@ -7,6 +7,7 @@ from oaklib.implementations import ProntoImplementation
 
 
 def is_float(element: any) -> bool:
+    """Checks whether an element is a float or not."""
     if element is None:
         return False
     try:
@@ -47,7 +48,3 @@ def all_files(directory: Path) -> list[Path]:
     files = [path for path in directory.iterdir()]
     files.sort()
     return files
-
-
-def read_variant_summary(variant_summary: Path) -> pl.DataFrame:
-    return pl.read_csv(variant_summary, separator="\t", infer_schema_length=10000)
