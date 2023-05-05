@@ -34,6 +34,7 @@ from phenotype2phenopacket.utils.utils import read_phenotype_annotation_file
 def create_synthetic_patient_command(
     phenotype_annotation: Path, num_disease: int, output_dir: Path
 ):
+    """Create a set of synthetic patient phenopackets from a phenotype annotation file."""
     output_dir.mkdir(exist_ok=True)
     phenotype_annotation_df = read_phenotype_annotation_file(phenotype_annotation)
     create_synthetic_patients(phenotype_annotation_df, num_disease, output_dir)
