@@ -41,6 +41,7 @@ def add_genes_command(
     hgnc_data: Path,
     output_dir: Path,
 ):
+    """Add known gene-to-phenotype relationships to a phenopacket."""
     output_dir.mkdir(exist_ok=True)
     disease_pg_df = read_disease_pg(disease_pg)
     add_genes_to_directory(
