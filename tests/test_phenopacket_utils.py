@@ -3,10 +3,20 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import polars as pl
+from phenopackets import (
+    Age,
+    Disease,
+    Individual,
+    OntologyClass,
+    PhenotypicFeature,
+    Resource,
+    TimeElement,
+)
 from polars.testing import assert_frame_equal
 
 from phenotype2phenopacket.utils.phenopacket_utils import (
     OnsetTerm,
+    PhenotypeAnnotationToPhenopacketConverter,
     SyntheticPatientGenerator,
     create_phenopacket_file_name_from_disease,
 )
@@ -897,4 +907,161 @@ class TestSyntheticPatientGenerator(unittest.TestCase):
                     "biocuration": "HPO:probinson[2013-03-12];HPO:probinson[2020-11-01]",
                 },
             ],
+        )
+
+
+class TestPhenotypeAnnotationToPhenopacketConverter(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.converter = PhenotypeAnnotationToPhenopacketConverter(load_ontology())
+        cls.phenotype_entry = {
+            "database_id": "OMIM:612567",
+            "disease_name": "Inflammatory bowel disease 25, early onset, autosomal recessive",
+            "qualifier": None,
+            "hpo_id": "HP:0004387",
+            "reference": "PMID:19890111",
+            "evidence": "PCS",
+            "onset": "HP:0003593",
+            "frequency": "2/2",
+            "sex": None,
+            "modifier": "HP:0012828",
+            "aspect": "P",
+            "biocuration": "HPO:probinson[2013-03-12];HPO:probinson[2020-11-01]",
+        }
+        cls.basic_phenotype_entry = {
+            "database_id": "OMIM:612567",
+            "disease_name": "Inflammatory bowel disease 25, early onset, autosomal recessive",
+            "qualifier": None,
+            "hpo_id": "HP:0004387",
+            "reference": "PMID:19890111",
+            "evidence": "PCS",
+            "onset": None,
+            "frequency": None,
+            "sex": None,
+            "modifier": None,
+            "aspect": "P",
+            "biocuration": "HPO:probinson[2013-03-12];HPO:probinson[2020-11-01]",
+        }
+
+    def test_create_individual_no_onset(self):
+        self.assertEqual(self.converter.create_individual(), Individual(id="patient1"))
+
+    def test_create_individual_with_onset(self):
+        mock_rand = Mock()
+        mock_rand.randint.return_value = 65
+        with patch.object(self.converter, "secrets_random_num", mock_rand):
+            self.assertEqual(
+                self.converter.create_individual(onset_range=OnsetTerm(upper_age=80, lower_age=40)),
+                Individual(
+                    id="patient1",
+                    time_at_last_encounter=TimeElement(age=Age(iso8601duration="P65Y")),
+                ),
+            )
+
+    def test_create_onset(self):
+        self.assertEqual(
+            self.converter.create_onset(self.phenotype_entry),
+            TimeElement(ontology_class=OntologyClass(id="HP:0003593", label="Infantile onset")),
+        )
+
+    def test_create_onset_none(self):
+        self.assertEqual(self.converter.create_onset(self.basic_phenotype_entry), None)
+
+    def test_create_modifier(self):
+        self.assertEqual(
+            self.converter.create_modifier(self.phenotype_entry),
+            [OntologyClass(id="HP:0012828", label="Severe")],
+        )
+
+    def test_create_modifier_none(self):
+        self.assertEqual(self.converter.create_modifier(self.basic_phenotype_entry), None)
+
+    def test_create_phenotypic_feature(self):
+        self.assertEqual(
+            self.converter.create_phenotypic_feature(self.phenotype_entry),
+            PhenotypicFeature(
+                type=OntologyClass(id="HP:0004387", label="Enterocolitis"),
+                onset=TimeElement(
+                    ontology_class=OntologyClass(id="HP:0003593", label="Infantile onset")
+                ),
+                modifiers=[OntologyClass(id="HP:0012828", label="Severe")],
+                excluded=False,
+            ),
+        )
+
+    def test_create_phenotypic_feature_basic(self):
+        self.assertEqual(
+            self.converter.create_phenotypic_feature(self.basic_phenotype_entry),
+            PhenotypicFeature(
+                type=OntologyClass(id="HP:0004387", label="Enterocolitis"),
+                onset=None,
+                modifiers=None,
+                excluded=False,
+            ),
+        )
+
+    def test_create_phenotypic_features(self):
+        self.assertEqual(
+            self.converter.create_phenotypic_features(disease_df_with_frequency),
+            [
+                PhenotypicFeature(
+                    type=OntologyClass(id="HP:0000143", label="Rectovaginal fistula"),
+                    onset=TimeElement(
+                        ontology_class=OntologyClass(id="HP:0003593", label="Infantile onset")
+                    ),
+                    modifiers=None,
+                    excluded=False,
+                ),
+                PhenotypicFeature(
+                    type=OntologyClass(id="HP:0004387", label="Enterocolitis"),
+                    onset=TimeElement(
+                        ontology_class=OntologyClass(id="HP:0003593", label="Infantile onset")
+                    ),
+                    modifiers=None,
+                    excluded=False,
+                ),
+                PhenotypicFeature(
+                    type=OntologyClass(id="HP:0033279", label="Enterocutaneous fistula"),
+                    onset=None,
+                    modifiers=None,
+                    excluded=False,
+                ),
+            ],
+        )
+
+    def test_create_disease(self):
+        self.assertEqual(
+            self.converter.create_disease(self.phenotype_entry),
+            Disease(
+                term=OntologyClass(
+                    id="OMIM:612567",
+                    label="Inflammatory bowel disease 25, early onset, autosomal recessive",
+                )
+            ),
+        )
+
+    def test_create_omim_resource(self):
+        self.assertEqual(
+            self.converter.create_omim_resource(),
+            Resource(
+                id="omim",
+                name="Online Mendelian Inheritance in Man",
+                url="https://www.omim.org",
+                version="hp/releases/2023-04-18",
+                namespace_prefix="OMIM",
+                iri_prefix="https://omim.org/entry/",
+            ),
+        )
+
+    def test_create_human_phenotype_ontology_resource(self):
+        self.assertEqual(
+            self.converter.create_human_phenotype_ontology_resource(),
+            Resource(
+                id="hp",
+                name="human phenotype ontology",
+                url="http://purl.obolibrary.org/obo/hp.owl",
+                version="hp/releases/2023-04-05",
+                namespace_prefix="HP",
+                iri_prefix="http://purl.obolibrary.org/obo/HP_",
+            ),
         )
