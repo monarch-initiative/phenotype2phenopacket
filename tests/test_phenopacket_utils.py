@@ -5,17 +5,34 @@ from unittest.mock import Mock, patch
 import polars as pl
 from phenopackets import (
     Age,
+    Diagnosis,
     Disease,
+    File,
+    GeneDescriptor,
+    GenomicInterpretation,
     Individual,
+    Interpretation,
+    MetaData,
     OntologyClass,
+    Phenopacket,
     PhenotypicFeature,
     Resource,
     TimeElement,
+    VariantInterpretation,
+    VariationDescriptor,
+    VcfRecord,
 )
 from polars.testing import assert_frame_equal
 
+from phenotype2phenopacket.utils.gene_map_utils import (
+    GeneIdentifierUpdater,
+    create_gene_identifier_map,
+    create_hgnc_dict,
+)
 from phenotype2phenopacket.utils.phenopacket_utils import (
     OnsetTerm,
+    PhenopacketInterpretationExtender,
+    PhenopacketUtil,
     PhenotypeAnnotationToPhenopacketConverter,
     SyntheticPatientGenerator,
     create_phenopacket_file_name_from_disease,
@@ -184,6 +201,77 @@ disease_df_with_frequency = pl.from_dicts(
             "biocuration": "HPO:probinson[2020-12-07]",
         },
     ]
+)
+
+gene_to_phenotypes = pl.from_dicts(
+    [
+        {
+            "database_id": "OMIM:612567",
+            "gene_mim_number": "OMIM:123889",
+            "disease_name": "Inflammatory bowel disease 25, early onset, autosomal recessive",
+            "entrez_id": "3588",
+            "diagnosis_status": "D",
+            "inheritance": "R",
+        },
+        {
+            "database_id": "OMIM:612567",
+            "gene_mim_number": "OMIM:123889",
+            "disease_name": "Inflammatory bowel disease 25, early onset, autosomal recessive",
+            "entrez_id": "1",
+            "diagnosis_status": "D",
+            "inheritance": "R",
+        },
+    ]
+)
+phenotypic_features_with_excluded = [
+    PhenotypicFeature(type=OntologyClass(id="HP:0000256", label="Macrocephaly")),
+    PhenotypicFeature(type=OntologyClass(id="HP:0002059", label="Cerebral atrophy")),
+    PhenotypicFeature(type=OntologyClass(id="HP:0100309", label="Subdural hemorrhage")),
+    PhenotypicFeature(type=OntologyClass(id="HP:0003150", label="Glutaric aciduria")),
+    PhenotypicFeature(type=OntologyClass(id="HP:0001332", label="Dystonia")),
+    PhenotypicFeature(
+        type=OntologyClass(id="HP:0008494", label="Inferior lens subluxation"), excluded=True
+    ),
+]
+
+phenopacket_files = [
+    File(
+        uri="test/path/to/test_1.vcf",
+        file_attributes={"fileFormat": "VCF", "genomeAssembly": "GRCh37"},
+    ),
+    File(
+        uri="test_1.ped",
+        file_attributes={"fileFormat": "PED", "genomeAssembly": "GRCh37"},
+    ),
+]
+phenopacket_metadata = MetaData(
+    created_by="pheval-converter",
+    resources=[
+        Resource(
+            id="hp",
+            name="human phenotype ontology",
+            url="http://purl.obolibrary.org/obo/hp.owl",
+            version="hp/releases/2019-11-08",
+            namespace_prefix="HP",
+            iri_prefix="http://purl.obolibrary.org/obo/HP_",
+        )
+    ],
+    phenopacket_schema_version="2.0",
+)
+phenopacket = Phenopacket(
+    id="test-subject",
+    subject=Individual(id="test-subject-1", sex=1),
+    phenotypic_features=phenotypic_features_with_excluded,
+    diseases=[
+        Disease(
+            term=OntologyClass(
+                id="OMIM:612567",
+                label="Inflammatory bowel disease 25, early onset, autosomal recessive",
+            )
+        )
+    ],
+    files=phenopacket_files,
+    meta_data=phenopacket_metadata,
 )
 
 
@@ -1063,5 +1151,150 @@ class TestPhenotypeAnnotationToPhenopacketConverter(unittest.TestCase):
                 version="hp/releases/2023-04-05",
                 namespace_prefix="HP",
                 iri_prefix="http://purl.obolibrary.org/obo/HP_",
+            ),
+        )
+
+
+class TestPhenopacketUtil(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.phenopacket = PhenopacketUtil(phenopacket)
+
+    def test_return_phenopacket_disease(self):
+        self.assertEqual(
+            self.phenopacket.return_phenopacket_disease(),
+            Disease(
+                term=OntologyClass(
+                    id="OMIM:612567",
+                    label="Inflammatory bowel disease 25, early onset, autosomal recessive",
+                )
+            ),
+        )
+
+
+class TestPhenopacketInterpretationExtender(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.phenopacket = PhenopacketInterpretationExtender(phenopacket)
+        cls.phenotype_to_gene_entry = {
+            "database_id": "OMIM:612567",
+            "gene_mim_number": "OMIM:123889",
+            "disease_name": "Inflammatory bowel disease 25, early onset, autosomal recessive",
+            "entrez_id": "3588",
+            "diagnosis_status": "D",
+            "inheritance": "R",
+        }
+        cls.gene_identifier_updater = GeneIdentifierUpdater(
+            gene_identifier="ensembl_id",
+            hgnc_data=create_hgnc_dict(
+                Path("./src/phenotype2phenopacket/resources/hgnc_complete_set_2023-04-01.txt")
+            ),
+            identifier_map=create_gene_identifier_map(
+                Path("./src/phenotype2phenopacket/resources/hgnc_complete_set_2023-04-01.txt")
+            ),
+        )
+
+    def test_create_gene_genomic_interpretation(self):
+        self.assertEqual(
+            self.phenopacket.create_gene_genomic_interpretation(
+                self.phenotype_to_gene_entry, self.gene_identifier_updater
+            ),
+            GenomicInterpretation(
+                subject_or_biosample_id="patient1",
+                interpretation_status=4,
+                gene=GeneDescriptor(
+                    value_id="ENSG00000243646",
+                    symbol="IL10RB",
+                ),
+            ),
+        )
+
+    def test_create_gene_genomic_interpretations(self):
+        self.assertEqual(
+            self.phenopacket.create_gene_genomic_interpretations(
+                gene_to_phenotypes, self.gene_identifier_updater
+            ),
+            [
+                GenomicInterpretation(
+                    subject_or_biosample_id="patient1",
+                    interpretation_status=4,
+                    gene=GeneDescriptor(
+                        value_id="ENSG00000243646",
+                        symbol="IL10RB",
+                    ),
+                ),
+                GenomicInterpretation(
+                    subject_or_biosample_id="patient1",
+                    interpretation_status=4,
+                    gene=GeneDescriptor(value_id="ENSG00000121410", symbol="A1BG"),
+                ),
+            ],
+        )
+
+    def test_create_gene_diagnosis(self):
+        self.assertEqual(
+            self.phenopacket.create_gene_diagnosis(
+                gene_to_phenotypes,
+                self.gene_identifier_updater,
+                Disease(
+                    term=OntologyClass(
+                        id="OMIM:612567",
+                        label="Inflammatory bowel disease 25, early onset, autosomal recessive",
+                    )
+                ),
+            ),
+            Diagnosis(
+                disease=OntologyClass(
+                    id="OMIM:612567",
+                    label="Inflammatory bowel disease 25, early onset, autosomal recessive",
+                ),
+                genomic_interpretations=[
+                    GenomicInterpretation(
+                        subject_or_biosample_id="patient1",
+                        interpretation_status=4,
+                        gene=GeneDescriptor(
+                            value_id="ENSG00000243646",
+                            symbol="IL10RB",
+                        ),
+                    ),
+                    GenomicInterpretation(
+                        subject_or_biosample_id="patient1",
+                        interpretation_status=4,
+                        gene=GeneDescriptor(value_id="ENSG00000121410", symbol="A1BG"),
+                    ),
+                ],
+            ),
+        )
+
+    def test_create_gene_interpretation(self):
+        self.assertEqual(
+            self.phenopacket.create_gene_interpretation(
+                gene_to_phenotypes, self.gene_identifier_updater
+            ),
+            Interpretation(
+                id="Inflammatory bowel disease 25, early onset, autosomal recessive"
+                + "-interpretation",
+                progress_status=0,
+                diagnosis=Diagnosis(
+                    disease=OntologyClass(
+                        id="OMIM:612567",
+                        label="Inflammatory bowel disease 25, early onset, autosomal recessive",
+                    ),
+                    genomic_interpretations=[
+                        GenomicInterpretation(
+                            subject_or_biosample_id="patient1",
+                            interpretation_status=4,
+                            gene=GeneDescriptor(
+                                value_id="ENSG00000243646",
+                                symbol="IL10RB",
+                            ),
+                        ),
+                        GenomicInterpretation(
+                            subject_or_biosample_id="patient1",
+                            interpretation_status=4,
+                            gene=GeneDescriptor(value_id="ENSG00000121410", symbol="A1BG"),
+                        ),
+                    ],
+                ),
             ),
         )
