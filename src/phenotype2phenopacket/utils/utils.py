@@ -20,7 +20,19 @@ def is_float(element: any) -> bool:
 
 def read_disease_pg(disease_pg: Path) -> pl.DataFrame:
     """Read a disease.pg file, returning a polars dataframe."""
-    disease = pl.read_csv(disease_pg, separator="|")
+    disease = pl.read_csv(
+        disease_pg,
+        separator="|",
+        new_columns=[
+            "database_id",
+            "gene_mim_number",
+            "disease_name",
+            "entrez_id",
+            "diagnosis_status",
+            "inheritance",
+        ],
+        has_header=False,
+    )
     return disease.filter(pl.col("database_id").str.starts_with("OMIM"))
 
 
