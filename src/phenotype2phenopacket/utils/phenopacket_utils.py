@@ -309,17 +309,16 @@ class SyntheticPatientGenerator:
 class PhenotypeAnnotationToPhenopacketConverter:
     def __init__(self, human_phenotype_ontology):
         self.human_phenotype_ontology = human_phenotype_ontology
+        self.secrets_random_num = secrets.SystemRandom()
 
-    @staticmethod
-    def create_individual(onset_range: OnsetTerm = None) -> Individual:
-        secrets_random_num = secrets.SystemRandom()
+    def create_individual(self, onset_range: OnsetTerm = None) -> Individual:
         """Create an Individual object."""
         age = (
-            secrets_random_num.randint(onset_range.lower_age, onset_range.upper_age)
+            self.secrets_random_num.randint(onset_range.lower_age, onset_range.upper_age)
             if onset_range is not None
             else None
         )
-        if onset_range.upper_age == 0 and onset_range.lower_age == 0:
+        if onset_range is None or onset_range.upper_age == 0 and onset_range.lower_age == 0:
             age = None
         return Individual(
             id="patient1",
