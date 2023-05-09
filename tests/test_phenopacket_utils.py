@@ -773,84 +773,128 @@ class TestSyntheticPatientGenerator(unittest.TestCase):
     def test_alter_term_specificity_less_specific(self):
         mock_return_value = 0.4
         mock_steps_value = 1
-        with patch.object(self.synthetic_patient_generator, "return_less_or_more_specific",
-                          return_value=mock_return_value), \
-                patch.object(self.synthetic_patient_generator, 'get_number_of_steps_for_randomisation',
-                             side_effect=[mock_steps_value, mock_steps_value]):
-            altered_phenotype = self.synthetic_patient_generator.alter_term_specificity([], {
-                "database_id": "OMIM:612567",
-                "disease_name": "Inflammatory bowel disease 25, early onset, autosomal recessive",
-                "qualifier": None,
-                "hpo_id": "HP:0004387",
-                "reference": "PMID:19890111",
-                "evidence": "PCS",
-                "onset": "HP:0003593",
-                "frequency": "2/2",
-                "sex": None,
-                "modifier": None,
-                "aspect": "P",
-                "biocuration": "HPO:probinson[2013-03-12];HPO:probinson[2020-11-01]",
-            })
-        self.assertEqual(altered_phenotype, [{'database_id': 'OMIM:612567',
-                                              'disease_name': 'Inflammatory bowel disease 25, '
-                                                              'early onset, autosomal recessive',
-                                              'qualifier': None, 'hpo_id': 'HP:0002583', 'reference': 'PMID:19890111',
-                                              'evidence': 'PCS', 'onset': 'HP:0003593', 'frequency': '2/2', 'sex': None,
-                                              'modifier': None, 'aspect': 'P',
-                                              'biocuration': 'HPO:probinson[2013-03-12];HPO:probinson[2020-11-01]'}]
-                         )
+        with patch.object(
+            self.synthetic_patient_generator,
+            "return_less_or_more_specific",
+            return_value=mock_return_value,
+        ), patch.object(
+            self.synthetic_patient_generator,
+            "get_number_of_steps_for_randomisation",
+            side_effect=[mock_steps_value, mock_steps_value],
+        ):
+            altered_phenotype = self.synthetic_patient_generator.alter_term_specificity(
+                [],
+                {
+                    "database_id": "OMIM:612567",
+                    "disease_name": "Inflammatory bowel disease 25, early onset, autosomal recessive",
+                    "qualifier": None,
+                    "hpo_id": "HP:0004387",
+                    "reference": "PMID:19890111",
+                    "evidence": "PCS",
+                    "onset": "HP:0003593",
+                    "frequency": "2/2",
+                    "sex": None,
+                    "modifier": None,
+                    "aspect": "P",
+                    "biocuration": "HPO:probinson[2013-03-12];HPO:probinson[2020-11-01]",
+                },
+            )
+        self.assertEqual(
+            altered_phenotype,
+            [
+                {
+                    "database_id": "OMIM:612567",
+                    "disease_name": "Inflammatory bowel disease 25, "
+                    "early onset, autosomal recessive",
+                    "qualifier": None,
+                    "hpo_id": "HP:0002583",
+                    "reference": "PMID:19890111",
+                    "evidence": "PCS",
+                    "onset": "HP:0003593",
+                    "frequency": "2/2",
+                    "sex": None,
+                    "modifier": None,
+                    "aspect": "P",
+                    "biocuration": "HPO:probinson[2013-03-12];HPO:probinson[2020-11-01]",
+                }
+            ],
+        )
 
     def test_alter_term_specificity_more_specific(self):
         mock_return_value = 0.8
         mock_steps_value = 1
-        with patch.object(self.synthetic_patient_generator, "return_less_or_more_specific",
-                          return_value=mock_return_value), \
-                patch.object(self.synthetic_patient_generator, 'get_number_of_steps_for_randomisation',
-                             side_effect=[mock_steps_value, mock_steps_value]):
-            altered_phenotype = self.synthetic_patient_generator.alter_term_specificity([{
-                "database_id": "OMIM:612567",
-                "disease_name": "Inflammatory bowel disease 25, early onset, autosomal recessive",
-                "qualifier": None,
-                "hpo_id": "HP:0004387",
-                "reference": "PMID:19890111",
-                "evidence": "PCS",
-                "onset": "HP:0003593",
-                "frequency": "2/2",
-                "sex": None,
-                "modifier": None,
-                "aspect": "P",
-                "biocuration": "HPO:probinson[2013-03-12];HPO:probinson[2020-11-01]",
-            }], {
-                "database_id": "OMIM:612567",
-                "disease_name": "Inflammatory bowel disease 25, early onset, autosomal recessive",
-                "qualifier": None,
-                "hpo_id": "HP:0011862",
-                "reference": "PMID:19890111",
-                "evidence": "PCS",
-                "onset": "HP:0010669",
-                "frequency": "2/2",
-                "sex": None,
-                "modifier": None,
-                "aspect": "P",
-                "biocuration": "HPO:probinson[2013-03-12];HPO:probinson[2020-11-01]",
-            })
-        self.assertEqual(altered_phenotype, [{
-            "database_id": "OMIM:612567",
-            "disease_name": "Inflammatory bowel disease 25, early onset, autosomal recessive",
-            "qualifier": None,
-            "hpo_id": "HP:0004387",
-            "reference": "PMID:19890111",
-            "evidence": "PCS",
-            "onset": "HP:0003593",
-            "frequency": "2/2",
-            "sex": None,
-            "modifier": None,
-            "aspect": "P",
-            "biocuration": "HPO:probinson[2013-03-12];HPO:probinson[2020-11-01]",
-        }, {'database_id': 'OMIM:612567',
-            'disease_name': 'Inflammatory bowel disease 25, '
-                            'early onset, autosomal recessive',
-            'qualifier': None, 'hpo_id': 'HP:0003784', 'reference': 'PMID:19890111',
-            'evidence': 'PCS', 'onset': 'HP:0010669', 'frequency': '2/2', 'sex': None,
-            'modifier': None, 'aspect': 'P',
-            'biocuration': 'HPO:probinson[2013-03-12];HPO:probinson[2020-11-01]'}])
+        with patch.object(
+            self.synthetic_patient_generator,
+            "return_less_or_more_specific",
+            return_value=mock_return_value,
+        ), patch.object(
+            self.synthetic_patient_generator,
+            "get_number_of_steps_for_randomisation",
+            side_effect=[mock_steps_value, mock_steps_value],
+        ):
+            altered_phenotype = self.synthetic_patient_generator.alter_term_specificity(
+                [
+                    {
+                        "database_id": "OMIM:612567",
+                        "disease_name": "Inflammatory bowel disease 25, early onset, autosomal recessive",
+                        "qualifier": None,
+                        "hpo_id": "HP:0004387",
+                        "reference": "PMID:19890111",
+                        "evidence": "PCS",
+                        "onset": "HP:0003593",
+                        "frequency": "2/2",
+                        "sex": None,
+                        "modifier": None,
+                        "aspect": "P",
+                        "biocuration": "HPO:probinson[2013-03-12];HPO:probinson[2020-11-01]",
+                    }
+                ],
+                {
+                    "database_id": "OMIM:612567",
+                    "disease_name": "Inflammatory bowel disease 25, early onset, autosomal recessive",
+                    "qualifier": None,
+                    "hpo_id": "HP:0011862",
+                    "reference": "PMID:19890111",
+                    "evidence": "PCS",
+                    "onset": "HP:0010669",
+                    "frequency": "2/2",
+                    "sex": None,
+                    "modifier": None,
+                    "aspect": "P",
+                    "biocuration": "HPO:probinson[2013-03-12];HPO:probinson[2020-11-01]",
+                },
+            )
+        self.assertEqual(
+            altered_phenotype,
+            [
+                {
+                    "database_id": "OMIM:612567",
+                    "disease_name": "Inflammatory bowel disease 25, early onset, autosomal recessive",
+                    "qualifier": None,
+                    "hpo_id": "HP:0004387",
+                    "reference": "PMID:19890111",
+                    "evidence": "PCS",
+                    "onset": "HP:0003593",
+                    "frequency": "2/2",
+                    "sex": None,
+                    "modifier": None,
+                    "aspect": "P",
+                    "biocuration": "HPO:probinson[2013-03-12];HPO:probinson[2020-11-01]",
+                },
+                {
+                    "database_id": "OMIM:612567",
+                    "disease_name": "Inflammatory bowel disease 25, "
+                    "early onset, autosomal recessive",
+                    "qualifier": None,
+                    "hpo_id": "HP:0003784",
+                    "reference": "PMID:19890111",
+                    "evidence": "PCS",
+                    "onset": "HP:0010669",
+                    "frequency": "2/2",
+                    "sex": None,
+                    "modifier": None,
+                    "aspect": "P",
+                    "biocuration": "HPO:probinson[2013-03-12];HPO:probinson[2020-11-01]",
+                },
+            ],
+        )
