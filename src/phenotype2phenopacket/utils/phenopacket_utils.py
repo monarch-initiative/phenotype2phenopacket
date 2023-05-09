@@ -288,6 +288,7 @@ class SyntheticPatientGenerator:
                     phenotype_entry, self.get_number_of_steps_for_randomisation()
                 )
             )
+        return new_phenotype_terms
 
     def patient_term_annotation_set(self):
         """Get the final patient term annotation set."""
@@ -297,7 +298,7 @@ class SyntheticPatientGenerator:
         patient_terms_sub_sample = self.subsample_patient_terms(patient_terms)
         new_phenotype_terms = []
         for phenotype_entry in patient_terms_sub_sample.rows(named=True):
-            self.alter_term_specificity(new_phenotype_terms, phenotype_entry)
+            new_phenotype_terms = self.alter_term_specificity(new_phenotype_terms, phenotype_entry)
         patient_terms_filtered = self.remove_terms_to_be_randomised(
             patient_terms, patient_terms_sub_sample
         )
