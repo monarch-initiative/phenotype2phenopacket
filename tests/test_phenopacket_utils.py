@@ -18,9 +18,6 @@ from phenopackets import (
     PhenotypicFeature,
     Resource,
     TimeElement,
-    VariantInterpretation,
-    VariationDescriptor,
-    VcfRecord,
 )
 from polars.testing import assert_frame_equal
 
