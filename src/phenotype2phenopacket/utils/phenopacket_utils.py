@@ -222,6 +222,7 @@ class SyntheticPatientGenerator:
                     if len(self.filtered_df) >= max_number:
                         break
                     self.check_frequency(phenotype_entry)
+            return pl.from_dicts(self.filtered_df)
         except TimeoutError:
             if len(self.filtered_df) == 0:
                 return frequency_df.sample(n=max_number)
