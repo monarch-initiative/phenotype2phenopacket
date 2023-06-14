@@ -1,6 +1,7 @@
 import json
 import re
 import secrets
+import signal
 from copy import copy
 from dataclasses import dataclass
 from fractions import Fraction
@@ -75,6 +76,10 @@ onset_hpo = {
     "HP:0003581": OnsetTerm(16, 80),
     "HP:0025710": OnsetTerm(25, 40),
 }
+
+
+def handler(signum, frame):
+    raise TimeoutError("Took too long to filter terms.")
 
 
 @dataclass
@@ -208,12 +213,22 @@ class SyntheticPatientGenerator:
 
     def filter_phenotype_entries(self, frequency_df: pl.DataFrame, max_number: int):
         """Filter annotations based on frequency."""
-        while len(self.filtered_df) < max_number:
-            for phenotype_entry in frequency_df.rows(named=True):
-                if len(self.filtered_df) >= max_number:
-                    break
-                self.check_frequency(phenotype_entry)
-        return pl.from_dicts(self.filtered_df)
+        time_limit = 15
+        signal.signal(signal.SIGALRM, handler)
+        signal.alarm(time_limit)
+        try:
+            while len(self.filtered_df) < max_number:
+                for phenotype_entry in frequency_df.rows(named=True):
+                    if len(self.filtered_df) >= max_number:
+                        break
+                    self.check_frequency(phenotype_entry)
+        except TimeoutError:
+            if len(self.filtered_df) == 0:
+                return frequency_df.sample(n=max_number)
+            else:
+                return pl.from_dicts(self.filtered_df)
+        finally:
+            signal.alarm(0)
 
     def get_patient_terms(self):
         """Get patient terms, filtered on frequency thresholds."""
