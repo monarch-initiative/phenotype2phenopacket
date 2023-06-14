@@ -126,7 +126,10 @@ class SyntheticPatientGenerator:
         """Get number of terms to ascribe from full set."""
         if len(self.disease_df) == 1:
             return 1
-        return int(len(self.disease_df) * (self.secret_rand.uniform(0.2, 0.75)))
+        number_of_terms = 0
+        while number_of_terms == 0:
+            number_of_terms = int(len(self.disease_df) * (self.secret_rand.uniform(0.2, 0.75)))
+        return number_of_terms
 
     @staticmethod
     def shuffle_dataframe(disease_df: pl.DataFrame):
