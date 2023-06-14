@@ -283,7 +283,7 @@ class SyntheticPatientGenerator:
             parent = self.secret_rand.choice(parents)
             rels = self.ontology.entity_alias_map(parent)
             term = "".join(rels[(list(rels.keys())[0])])
-            if term.startswith("Abnormality of") or term_id == "HP:0000118":
+            if term.startswith("Abnormality of") or term_id == "HP:0000118" or term_id == "HP:0032443":
                 break
             else:
                 term_id = parent
