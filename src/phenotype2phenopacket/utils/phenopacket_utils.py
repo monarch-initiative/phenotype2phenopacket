@@ -45,6 +45,7 @@ frequency_hpo = {
     "HP:0040284": FrequencyTerm(30, 79),
     "HP:0040285": FrequencyTerm(80, 99),
     "HP:0040286": FrequencyTerm(100, 100),
+    "HP:0040280": FrequencyTerm(100, 100),
 }
 
 
@@ -172,12 +173,19 @@ class SyntheticPatientGenerator:
     def check_hpo_frequency(self, phenotype_entry: dict):
         """Filter with HPO defined frequencies."""
         frequency_limits = frequency_hpo[phenotype_entry["frequency"]]
-        random_frequency = self.secret_rand.uniform(0, 100)
         if (
-            float(frequency_limits.lower) < random_frequency < float(frequency_limits.upper)
+            frequency_limits.lower == 100
+            and frequency_limits.upper == 100
             and phenotype_entry not in self.filtered_df
         ):
             self.filtered_df.append(phenotype_entry)
+        else:
+            random_frequency = self.secret_rand.uniform(0, 100)
+            if (
+                float(frequency_limits.lower) < random_frequency < float(frequency_limits.upper)
+                and phenotype_entry not in self.filtered_df
+            ):
+                self.filtered_df.append(phenotype_entry)
 
     def check_frequency_threshold(
         self, frequency: float, phenotype_entry: dict, random_frequency: float
