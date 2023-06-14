@@ -104,12 +104,18 @@ def create_json_message(phenopacket: Phenopacket) -> str:
     return MessageToJson(phenopacket)
 
 
-def write_phenopacket(phenopacket: Phenopacket, output_file: Path) -> None:
+def write_phenopacket(phenopacket: Phenopacket, output_file: Path) -> Path:
     """Write a phenopacket."""
     phenopacket_json = create_json_message(phenopacket)
-    with open(output_file, "w") as outfile:
-        outfile.write(phenopacket_json)
-    outfile.close()
+    suffix = 1
+    while Path(
+        output_file.parents[0].joinpath(f"{output_file.stem}_patient_{suffix}.json")
+    ).is_file():
+        suffix += 1
+    output_file = output_file.parents[0].joinpath(f"{output_file.stem}_patient_{suffix}.json")
+    with open(output_file, "w") as file:
+        file.write(phenopacket_json)
+    file.close()
 
 
 class SyntheticPatientGenerator:
