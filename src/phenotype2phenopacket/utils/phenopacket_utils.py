@@ -150,15 +150,12 @@ class SyntheticPatientGenerator:
 
     def add_frequency(self):
         """Add random frequency to annotations without one defined."""
-        updated_df = []
-        for row in self.disease_df.rows(named=True):
-            if row["frequency"] is None:
-                synthetic_frequency = self.secret_rand.uniform(0, 1)
-                row["frequency"] = synthetic_frequency
-                updated_df.append(row)
-            elif row["frequency"] is not None:
-                updated_df.append(row)
-        return pl.from_dicts(updated_df)
+        return self.disease_df.with_columns([
+            pl.when(self.disease_df['frequency'].is_null())
+            .then(pl.lit(self.secret_rand.uniform(0, 1)))
+            .otherwise(self.disease_df['frequency'])
+            .alias('frequency')
+        ])
 
     def get_onset_range(self):
         """Get the onset range from a set of annotations for a disease."""
