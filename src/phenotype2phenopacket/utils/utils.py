@@ -62,6 +62,17 @@ def read_phenotype_annotation_file(phenotype_annotation_file_path: Path) -> pl.D
     return pl.read_csv(phenotype_annotation_file_path, separator="\t", comment_char="#")
 
 
+def get_phenotype_annotation_version(phenotype_annotation_file_path: Path) -> str:
+    """Read a phenotype annotation file and returns the version of the phenotype annotation."""
+    version = None
+    with open(phenotype_annotation_file_path, "r") as f:
+        for line in f:
+            if line.startswith("#version"):
+                version = line.split("#version: ")[1].strip("\n")
+    f.close()
+    return version
+
+
 def all_files(directory: Path) -> list[Path]:
     """Obtains all files from a given directory."""
     files = [path for path in directory.iterdir()]
