@@ -438,18 +438,18 @@ class PhenotypeAnnotationToPhenopacketConverter:
         )
 
     @staticmethod
-    def create_human_phenotype_ontology_resource() -> Resource:
+    def create_human_phenotype_ontology_resource(hpoa_version: str) -> Resource:
         """Create human phenotype ontology resource."""
         return Resource(
             id="hp",
             name="human phenotype ontology",
             url="http://purl.obolibrary.org/obo/hp.owl",
-            version="hp/releases/2023-04-05",
+            version="hp/releases/" + hpoa_version,
             namespace_prefix="HP",
             iri_prefix="http://purl.obolibrary.org/obo/HP_",
         )
 
-    def create_metadata(self) -> MetaData:
+    def create_metadata(self, hpoa_version: str) -> MetaData:
         """Create metadata"""
         timestamp = Timestamp()
         timestamp.GetCurrentTime()
@@ -457,14 +457,17 @@ class PhenotypeAnnotationToPhenopacketConverter:
             created=timestamp,
             created_by="phenotype2phenopacket",
             resources=[
-                self.create_human_phenotype_ontology_resource(),
+                self.create_human_phenotype_ontology_resource(hpoa_version),
                 self.create_omim_resource(),
             ],
             phenopacket_schema_version="2.0",
         )
 
     def create_phenopacket(
-        self, omim_disease_df: pl.DataFrame, onset: OnsetTerm = None
+        self,
+        omim_disease_df: pl.DataFrame,
+        hpoa_version: str,
+        onset: OnsetTerm = None,
     ) -> PhenopacketFile:
         """Create a Phenopacket object."""
         phenotypic_features = self.create_phenotypic_features(omim_disease_df)
@@ -475,7 +478,7 @@ class PhenotypeAnnotationToPhenopacketConverter:
                 subject=self.create_individual(onset),
                 phenotypic_features=phenotypic_features,
                 diseases=[self.create_disease(phenotype_annotation_entry)],
-                meta_data=self.create_metadata(),
+                meta_data=self.create_metadata(hpoa_version),
             ),
             phenopacket_path=create_phenopacket_file_name_from_disease(
                 phenotype_annotation_entry["disease_name"]
