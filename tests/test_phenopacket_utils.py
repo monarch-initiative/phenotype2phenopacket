@@ -1140,7 +1140,7 @@ class TestPhenotypeAnnotationToPhenopacketConverter(unittest.TestCase):
 
     def test_create_human_phenotype_ontology_resource(self):
         self.assertEqual(
-            self.converter.create_human_phenotype_ontology_resource(),
+            self.converter.create_human_phenotype_ontology_resource("2023-04-05"),
             Resource(
                 id="hp",
                 name="human phenotype ontology",
