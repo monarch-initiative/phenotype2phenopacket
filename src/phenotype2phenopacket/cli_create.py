@@ -3,7 +3,6 @@ from pathlib import Path
 import click
 
 from phenotype2phenopacket.create.create import create_synthetic_patients
-from phenotype2phenopacket.utils.utils import read_phenotype_annotation_file
 
 
 @click.command("create")
@@ -36,5 +35,4 @@ def create_synthetic_patient_command(
 ):
     """Create a set of synthetic patient phenopackets from a phenotype annotation file."""
     output_dir.mkdir(exist_ok=True)
-    phenotype_annotation_df = read_phenotype_annotation_file(phenotype_annotation)
-    create_synthetic_patients(phenotype_annotation_df, num_disease, output_dir)
+    create_synthetic_patients(phenotype_annotation, num_disease, output_dir)
