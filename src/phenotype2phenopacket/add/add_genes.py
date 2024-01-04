@@ -2,16 +2,16 @@ from pathlib import Path
 
 import polars as pl
 from phenopackets import Disease
-
-from phenotype2phenopacket.utils.gene_map_utils import (
+from pheval.utils.phenopacket_utils import (
     GeneIdentifierUpdater,
     create_gene_identifier_map,
     create_hgnc_dict,
+    phenopacket_reader,
 )
+
 from phenotype2phenopacket.utils.phenopacket_utils import (
     PhenopacketInterpretationExtender,
     PhenopacketUtil,
-    phenopacket_reader,
     write_phenopacket,
 )
 from phenotype2phenopacket.utils.utils import all_files
@@ -66,20 +66,17 @@ def add_genes(
         ) if phenopacket_with_genes is not None else None
 
 
-def add_genes_to_directory(
-    phenopacket_dir: Path, disease_pg: pl.DataFrame, hgnc_data_file: Path, output_dir: Path
-):
+def add_genes_to_directory(phenopacket_dir: Path, disease_pg: pl.DataFrame, output_dir: Path):
     """
     Add known gene-to-phenotype relationships to the interpretations of a directory of phenopackets.
 
     Args:
         phenopacket_dir (Path): Directory containing the phenopacket files.
         disease_pg (pl.DataFrame): DataFrame containing disease.pg entries.
-        hgnc_data_file (Path): File path to HGNC data file.
         output_dir (Path): Directory to store the updated phenopackets.
     """
-    hgnc_dict = create_hgnc_dict(hgnc_data_file)
-    identifier_map = create_gene_identifier_map(hgnc_data_file)
+    hgnc_dict = create_hgnc_dict()
+    identifier_map = create_gene_identifier_map()
     gene_identifier_updater = GeneIdentifierUpdater(
         gene_identifier="ensembl_id", hgnc_data=hgnc_dict, identifier_map=identifier_map
     )

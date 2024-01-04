@@ -22,13 +22,6 @@ from phenotype2phenopacket.utils.utils import read_disease_pg
     type=Path,
 )
 @click.option(
-    "--hgnc-data",
-    "-h",
-    required=True,
-    help="Path to hgnc_full_set data file.",
-    type=Path,
-)
-@click.option(
     "--output-dir",
     "-o",
     required=True,
@@ -38,7 +31,6 @@ from phenotype2phenopacket.utils.utils import read_disease_pg
 def add_genes_command(
     phenopacket_dir: Path,
     disease_pg: Path,
-    hgnc_data: Path,
     output_dir: Path,
 ):
     """
@@ -47,7 +39,6 @@ def add_genes_command(
     Args:
         phenopacket_dir (Path): Directory containing the phenopacket files.
         disease_pg (Path): Path to the disease.pg file.
-        hgnc_data (Path): Path to the HGNC data file.
         output_dir (Path): Directory to store the updated phenopackets.
     """
     output_dir.mkdir(exist_ok=True)
@@ -55,6 +46,5 @@ def add_genes_command(
     add_genes_to_directory(
         phenopacket_dir,
         disease_pg_df,
-        hgnc_data,
         output_dir,
     )
