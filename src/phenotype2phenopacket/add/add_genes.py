@@ -2,8 +2,12 @@ from pathlib import Path
 
 import polars as pl
 from phenopackets import Disease
-from pheval.utils.phenopacket_utils import phenopacket_reader, GeneIdentifierUpdater, create_hgnc_dict, \
-    create_gene_identifier_map
+from pheval.utils.phenopacket_utils import (
+    GeneIdentifierUpdater,
+    create_gene_identifier_map,
+    create_hgnc_dict,
+    phenopacket_reader,
+)
 
 from phenotype2phenopacket.utils.phenopacket_utils import (
     PhenopacketInterpretationExtender,
@@ -62,9 +66,7 @@ def add_genes(
         ) if phenopacket_with_genes is not None else None
 
 
-def add_genes_to_directory(
-    phenopacket_dir: Path, disease_pg: pl.DataFrame, output_dir: Path
-):
+def add_genes_to_directory(phenopacket_dir: Path, disease_pg: pl.DataFrame, output_dir: Path):
     """
     Add known gene-to-phenotype relationships to the interpretations of a directory of phenopackets.
 

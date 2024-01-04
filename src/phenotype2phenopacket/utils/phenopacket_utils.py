@@ -15,7 +15,6 @@ from phenopackets import (
     Age,
     Diagnosis,
     Disease,
-    Family,
     GeneDescriptor,
     GenomicInterpretation,
     Individual,
@@ -27,7 +26,7 @@ from phenopackets import (
     Resource,
     TimeElement,
 )
-from pheval.utils.phenopacket_utils import create_json_message, GeneIdentifierUpdater
+from pheval.utils.phenopacket_utils import GeneIdentifierUpdater, create_json_message
 
 from phenotype2phenopacket.utils.utils import is_float
 
@@ -140,7 +139,7 @@ def write_phenopacket(phenopacket: Phenopacket, output_file: Path) -> None:
     suffix = 1
     if "_patient_" not in output_file.stem:
         while Path(
-                output_file.parents[0].joinpath(f"{output_file.stem}_patient_{suffix}.json")
+            output_file.parents[0].joinpath(f"{output_file.stem}_patient_{suffix}.json")
         ).is_file():
             suffix += 1
         output_file = output_file.parents[0].joinpath(f"{output_file.stem}_patient_{suffix}.json")
@@ -155,7 +154,7 @@ class SyntheticPatientGenerator:
     """Class for generating synthetic patients."""
 
     def __init__(
-            self, disease_df: pl.DataFrame, ontology: ProntoImplementation, ontology_factory: Ontology
+        self, disease_df: pl.DataFrame, ontology: ProntoImplementation, ontology_factory: Ontology
     ):
         """
         Initialise the SyntheticPatientGenerator class
@@ -246,21 +245,21 @@ class SyntheticPatientGenerator:
         """
         frequency_limits = frequency_hpo[phenotype_entry["frequency"]]
         if (
-                frequency_limits.lower == 100
-                and frequency_limits.upper == 100
-                and phenotype_entry not in self.filtered_df
+            frequency_limits.lower == 100
+            and frequency_limits.upper == 100
+            and phenotype_entry not in self.filtered_df
         ):
             self.filtered_df.append(phenotype_entry)
         else:
             random_frequency = self.secret_rand.uniform(0, 100)
             if (
-                    float(frequency_limits.lower) < random_frequency < float(frequency_limits.upper)
-                    and phenotype_entry not in self.filtered_df
+                float(frequency_limits.lower) < random_frequency < float(frequency_limits.upper)
+                and phenotype_entry not in self.filtered_df
             ):
                 self.filtered_df.append(phenotype_entry)
 
     def check_frequency_threshold(
-            self, frequency: float, phenotype_entry: dict, random_frequency: float
+        self, frequency: float, phenotype_entry: dict, random_frequency: float
     ):
         """
         Check if patient frequency meets the filter for the disease frequency.
@@ -481,9 +480,9 @@ class SyntheticPatientGenerator:
             rels = self.ontology.entity_alias_map(parent)
             term = "".join(rels[(list(rels.keys())[0])])
             if (
-                    term.startswith("Abnormality of")
-                    or term_id == "HP:0000118"
-                    or term_id == "HP:0032443"
+                term.startswith("Abnormality of")
+                or term_id == "HP:0000118"
+                or term_id == "HP:0032443"
             ):
                 break
             else:
@@ -493,7 +492,7 @@ class SyntheticPatientGenerator:
 
     @staticmethod
     def remove_terms_to_be_randomised(
-            patient_terms: pl.DataFrame, subset: pl.DataFrame
+        patient_terms: pl.DataFrame, subset: pl.DataFrame
     ) -> pl.DataFrame:
         """
         Remove terms selected for randomisation from patient terms.
@@ -511,7 +510,7 @@ class SyntheticPatientGenerator:
         return patient_terms
 
     def alter_term_specificity(
-            self, new_phenotype_terms: List[dict], phenotype_entry: dict
+        self, new_phenotype_terms: List[dict], phenotype_entry: dict
     ) -> List[dict]:
         """
         Alter the specificity of the HPO ID.
@@ -780,10 +779,10 @@ class PhenotypeAnnotationToPhenopacketConverter:
         )
 
     def create_phenopacket(
-            self,
-            omim_disease_df: pl.DataFrame,
-            hpoa_version: str,
-            onset: OnsetTerm = None,
+        self,
+        omim_disease_df: pl.DataFrame,
+        hpoa_version: str,
+        onset: OnsetTerm = None,
     ) -> PhenopacketFile:
         """
         Create a Phenopacket object.
@@ -852,7 +851,7 @@ class PhenopacketInterpretationExtender:
 
     @staticmethod
     def create_gene_genomic_interpretation(
-            gene_to_phenotype_entry: dict, gene_identifier_updater: GeneIdentifierUpdater
+        gene_to_phenotype_entry: dict, gene_identifier_updater: GeneIdentifierUpdater
     ) -> GenomicInterpretation:
         """
         Create genomic interpretation for a gene-to-phenotype relationship.
@@ -889,9 +888,9 @@ class PhenopacketInterpretationExtender:
             return None
 
     def create_gene_genomic_interpretations(
-            self,
-            omim_disease_phenotype_gene_map: pl.DataFrame,
-            gene_identifier_updater: GeneIdentifierUpdater,
+        self,
+        omim_disease_phenotype_gene_map: pl.DataFrame,
+        gene_identifier_updater: GeneIdentifierUpdater,
     ) -> List[GenomicInterpretation]:
         """
         Create a list of genomic interpretations for known gene-to-phenotype relationships.
@@ -917,10 +916,10 @@ class PhenopacketInterpretationExtender:
         return genomic_interpretations
 
     def create_gene_diagnosis(
-            self,
-            omim_disease_phenotype_gene_map: pl.DataFrame,
-            gene_identifier_updater: GeneIdentifierUpdater,
-            disease: Disease,
+        self,
+        omim_disease_phenotype_gene_map: pl.DataFrame,
+        gene_identifier_updater: GeneIdentifierUpdater,
+        disease: Disease,
     ) -> Diagnosis:
         """
         Create a diagnosis object for known gene-to-phenotype relationships.
@@ -953,9 +952,9 @@ class PhenopacketInterpretationExtender:
         )
 
     def create_gene_interpretation(
-            self,
-            omim_disease_phenotype_gene_map: pl.DataFrame,
-            gene_identifier_updater: GeneIdentifierUpdater,
+        self,
+        omim_disease_phenotype_gene_map: pl.DataFrame,
+        gene_identifier_updater: GeneIdentifierUpdater,
     ) -> Interpretation:
         """
         Create an interpretation object for known gene-to-phenotype relationships.
@@ -987,9 +986,9 @@ class PhenopacketInterpretationExtender:
         )
 
     def add_gene_interpretation_to_phenopacket(
-            self,
-            omim_disease_phenotype_gene_map: pl.DataFrame,
-            gene_identifier_updater: GeneIdentifierUpdater,
+        self,
+        omim_disease_phenotype_gene_map: pl.DataFrame,
+        gene_identifier_updater: GeneIdentifierUpdater,
     ) -> Phenopacket:
         """
         Add interpretations to a Phenopacket.

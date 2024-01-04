@@ -19,8 +19,13 @@ from phenopackets import (
     Resource,
     TimeElement,
 )
+from pheval.utils.phenopacket_utils import (
+    GeneIdentifierUpdater,
+    create_gene_identifier_map,
+    create_hgnc_dict,
+)
 from polars.testing import assert_frame_equal
-from pheval.utils.phenopacket_utils import GeneIdentifierUpdater, create_gene_identifier_map, create_hgnc_dict
+
 from phenotype2phenopacket.utils.phenopacket_utils import (
     OnsetTerm,
     PhenopacketInterpretationExtender,
@@ -1178,11 +1183,8 @@ class TestPhenopacketInterpretationExtender(unittest.TestCase):
         }
         cls.gene_identifier_updater = GeneIdentifierUpdater(
             gene_identifier="ensembl_id",
-            hgnc_data=create_hgnc_dict(
-
-            ),
-            identifier_map=create_gene_identifier_map(
-            ),
+            hgnc_data=create_hgnc_dict(),
+            identifier_map=create_gene_identifier_map(),
         )
 
     def test_create_gene_genomic_interpretation(self):
