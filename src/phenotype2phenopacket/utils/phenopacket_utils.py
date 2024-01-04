@@ -6,11 +6,13 @@ from copy import copy
 from dataclasses import dataclass
 from fractions import Fraction
 from pathlib import Path
-from typing import Union
+from typing import List, Union
 
 import polars as pl
 from google.protobuf.json_format import MessageToJson, Parse
 from google.protobuf.timestamp_pb2 import Timestamp
+from oaklib.implementations import ProntoImplementation
+from ontobio import Ontology
 from phenopackets import (
     Age,
     Diagnosis,
@@ -34,6 +36,16 @@ from phenotype2phenopacket.utils.utils import is_float
 
 @dataclass
 class FrequencyTerm:
+    """
+    Represents a frequency range with upper and lower values.
+
+    Attributes:
+        lower (Union[int, str]): The lower bound of the frequency range.
+            Can be an integer or a string representing the lower frequency value.
+        upper (Union[int, str]): The upper bound of the frequency range.
+            Can be an integer or a string representing the upper frequency value.
+    """
+
     lower: Union[int, str]
     upper: Union[int, str]
 
@@ -51,6 +63,16 @@ frequency_hpo = {
 
 @dataclass
 class OnsetTerm:
+    """
+    Represents a range of onset ages with the lowest and highest values.
+
+    Attributes:
+        lower_age (Union[int, str]): The lowest age of onset.
+            Can be an integer or a string representing the lowest age value.
+        upper_age (Union[int, str]): The highest age of onset.
+            Can be an integer or a string representing the highest age value.
+    """
+
     lower_age: Union[int, str]
     upper_age: Union[int, str]
 
@@ -85,12 +107,28 @@ def handler(signum, frame):
 
 @dataclass
 class PhenopacketFile:
+    """
+    Represents a proband presented as a Phenopacket object and the corresponding phenopacket file name.
+
+    Attributes:
+        phenopacket: Phenopacket object of the proband.
+        phenopacket_path: Path to the phenopacket file.
+    """
+
     phenopacket: Phenopacket
     phenopacket_path: Path
 
 
 def phenopacket_reader(file: Path):
-    """Reads a phenopacket file, returning its contents."""
+    """
+    Read a Phenopacket file and returns its contents as a Phenopacket or Family object
+
+    Args:
+        file (Path): Path to the Phenopacket file
+
+    Returns:
+        Union[Phenopacket, Family]: Contents of the Phenopacket file as a Phenopacket or Family object
+    """
     file = open(file, "r")
     phenopacket = json.load(file)
     file.close()
@@ -101,17 +139,37 @@ def phenopacket_reader(file: Path):
 
 
 def create_phenopacket_file_name_from_disease(disease_name: str) -> Path:
+    """
+    Create a Phenopacket file name from the disease.
+
+    Args:
+        disease_name (str): The name of the disease.
+    """
     normalised_string = re.sub(r"\W+", "_", disease_name)
     return Path(normalised_string.replace(" ", "_") + ".json")
 
 
 def create_json_message(phenopacket: Phenopacket) -> str:
-    """Create json message for writing to file."""
+    """
+    Create a JSON message for writing to a file.
+
+    Args:
+        phenopacket (Phenopacket): The Phenopacket object to convert to JSON.
+
+    Returns:
+        str: A JSON-formatted string representation of the Phenopacket or Family object.
+    """
     return MessageToJson(phenopacket)
 
 
-def write_phenopacket(phenopacket: Phenopacket, output_file: Path) -> Path:
-    """Write a phenopacket."""
+def write_phenopacket(phenopacket: Phenopacket, output_file: Path) -> None:
+    """
+    Write a Phenopacket object to a file in JSON format.
+
+    Args:
+        phenopacket (Phenopacket): The Phenopacket object to be written.
+        output_file (Path): The Path object representing the file to write the Phenopacket data.
+    """
     phenopacket_json = create_json_message(phenopacket)
     suffix = 1
     while Path(
@@ -125,7 +183,20 @@ def write_phenopacket(phenopacket: Phenopacket, output_file: Path) -> Path:
 
 
 class SyntheticPatientGenerator:
-    def __init__(self, disease_df: pl.DataFrame, ontology, ontology_factory):
+    """Class for generating synthetic patients."""
+
+    def __init__(
+        self, disease_df: pl.DataFrame, ontology: ProntoImplementation, ontology_factory: Ontology
+    ):
+        """
+        Initialise the SyntheticPatientGenerator class
+
+        Args:
+            disease_df (pl.DataFrame): The dataframe containing the annotation data for a specific disease.
+            ontology (ProntoImplementation): An instance of ProntoImplementation containing the loaded HPO.
+            ontology_factory (Ontology): Created ontology from OntologyFactory
+
+        """
         self.disease_df = disease_df
         self.ontology = ontology
         self.ontology_factory = ontology_factory
@@ -134,8 +205,13 @@ class SyntheticPatientGenerator:
         self.filtered_df = []
         self.secret_rand = secrets.SystemRandom()
 
-    def get_number_of_terms(self):
-        """Get number of terms to ascribe from full set."""
+    def get_number_of_terms(self) -> int:
+        """
+        Get the number of terms to ascribe from the full set.
+
+        Returns:
+            int: Number of terms to ascribe from the full set.
+        """
         if len(self.disease_df) == 1:
             return 1
         number_of_terms = 0
@@ -144,12 +220,25 @@ class SyntheticPatientGenerator:
         return number_of_terms
 
     @staticmethod
-    def shuffle_dataframe(disease_df: pl.DataFrame):
-        """Shuffle dataframe."""
+    def shuffle_dataframe(disease_df: pl.DataFrame) -> pl.DataFrame:
+        """
+        Shuffle the rows of a dataframe.
+
+        Args:
+            disease_df (pl.DataFrame): The dataframe containing the annotation data for a specific disease
+
+        Returns:
+            pl.DataFrame: The shuffled dataframe
+        """
         return disease_df.sample(fraction=1, shuffle=True)
 
-    def add_frequency(self):
-        """Add random frequency to annotations without one defined."""
+    def add_frequency(self) -> pl.DataFrame:
+        """
+        Add random frequency to annotations without one defined.
+
+        Returns:
+            pl.DataFrame: DataFrame with random frequency added to annotations without one defined.
+        """
         return self.disease_df.with_columns(
             [
                 pl.when(self.disease_df["frequency"].is_null())
@@ -159,18 +248,33 @@ class SyntheticPatientGenerator:
             ]
         )
 
-    def get_onset_range(self):
-        """Get the onset range from a set of annotations for a disease."""
+    def get_onset_range(self) -> OnsetTerm:
+        """
+        Get the onset range from a set of annotations for a disease.
+
+        Returns:
+            OnsetTerm: An instance of OnsetTerm representing the onset range from the annotations.
+        """
         for phenotype_entry in self.disease_df.rows(named=True):
             if phenotype_entry["onset"] is not None:
-                if self.lower_age < float(onset_hpo[phenotype_entry["onset"]].lower_age):
-                    self.lower_age = float(onset_hpo[phenotype_entry["onset"]].lower_age)
-                if self.upper_age < float(onset_hpo[phenotype_entry["onset"]].upper_age):
-                    self.upper_age = float(onset_hpo[phenotype_entry["onset"]].upper_age)
+                if self.lower_age < int(onset_hpo[phenotype_entry["onset"]].lower_age):
+                    self.lower_age = int(onset_hpo[phenotype_entry["onset"]].lower_age)
+                if self.upper_age < int(onset_hpo[phenotype_entry["onset"]].upper_age):
+                    self.upper_age = int(onset_hpo[phenotype_entry["onset"]].upper_age)
         return OnsetTerm(lower_age=self.lower_age, upper_age=self.upper_age)
 
-    def check_hpo_frequency(self, phenotype_entry: dict):
-        """Filter with HPO defined frequencies."""
+    def check_hpo_frequency(self, phenotype_entry: dict) -> None:
+        """
+        Filter annotations based on HPO-defined frequencies.
+
+        Args:
+            phenotype_entry (dict): A dictionary representing an HPO phenotype entry.
+
+        Notes:
+            This method filters phenotype entries based on their defined frequencies from the HPO database.
+            If the frequency is 100-100 or if a random frequency falls within the defined limits,
+            the phenotype_entry will be appended to the filtered list.
+        """
         frequency_limits = frequency_hpo[phenotype_entry["frequency"]]
         if (
             frequency_limits.lower == 100
@@ -189,32 +293,71 @@ class SyntheticPatientGenerator:
     def check_frequency_threshold(
         self, frequency: float, phenotype_entry: dict, random_frequency: float
     ):
-        """Check if patient frequency meets the filter for the disease frequency."""
+        """
+        Check if patient frequency meets the filter for the disease frequency.
+
+        Args:
+            frequency (float): The disease frequency threshold.
+            phenotype_entry (dict): A dictionary representing an HPO phenotype entry.
+            random_frequency (float): The random frequency of the patient.
+
+        Notes:
+            This method compares the patient's random frequency against the disease frequency threshold.
+            If the patient's random frequency is less than or equal to the disease frequency and
+            the phenotype_entry is not already in the filtered list, it will be appended.
+        """
         if random_frequency <= float(frequency) and phenotype_entry not in self.filtered_df:
             self.filtered_df.append(phenotype_entry)
         else:
             pass
 
     def check_percentage_frequency(self, phenotype_entry: dict):
-        """Filter with percentage frequency."""
+        """
+        Filter annotations with percentage-based frequency.
+
+        Args:
+            phenotype_entry (dict): A dictionary representing an HPO phenotype entry.
+        """
         frequency = phenotype_entry["frequency"].strip("%")
         random_frequency = self.secret_rand.uniform(0, 100)
         self.check_frequency_threshold(frequency, phenotype_entry, random_frequency)
 
     def check_fraction_frequency(self, phenotype_entry: dict):
-        """Filter with fraction frequency."""
+        """
+        Filter annotations with fraction-based frequency.
+
+        Args:
+            phenotype_entry (dict): A dictionary representing an HPO phenotype entry.
+        """
         random_frequency = self.secret_rand.uniform(0, 1)
         frequency = float(Fraction(phenotype_entry["frequency"]))
         self.check_frequency_threshold(frequency, phenotype_entry, random_frequency)
 
     def check_float_frequency(self, phenotype_entry: dict):
-        """Filter with float threshold."""
+        """
+        Filter annotations with float-based frequency.
+
+        Args:
+            phenotype_entry (dict): A dictionary representing an HPO phenotype entry.
+        """
         random_frequency = self.secret_rand.uniform(0, 1)
         frequency = float((phenotype_entry["frequency"]))
         self.check_frequency_threshold(frequency, phenotype_entry, random_frequency)
 
     def check_frequency(self, phenotype_entry: dict):
-        """Filter for frequency."""
+        """
+        Filter phenotype entries based on different types of frequency representations.
+
+        Args:
+            phenotype_entry (dict): A dictionary representing an HPO phenotype entry.
+
+        Notes:
+            This method categorises and filters phenotype entries based on different types of frequency representations:
+            HPO-defined frequencies starting with "HP:",
+            percentage-based frequencies ending with "%",
+            frequencies represented as fractions (containing "/"),
+            and frequencies represented as floating-point numbers.
+        """
         if str(phenotype_entry["frequency"]).startswith("HP:"):
             self.check_hpo_frequency(phenotype_entry)
         elif str(phenotype_entry["frequency"]).endswith("%"):
@@ -225,7 +368,20 @@ class SyntheticPatientGenerator:
             self.check_float_frequency(phenotype_entry)
 
     def filter_phenotype_entries(self, frequency_df: pl.DataFrame, max_number: int):
-        """Filter annotations based on frequency."""
+        """
+        Filter annotations based on frequency.
+
+        Args:
+            frequency_df (pl.DataFrame): DataFrame containing phenotype frequency data.
+            max_number (int): Maximum number of phenotype entries to filter.
+
+        Returns:
+            pl.DataFrame: Filtered phenotype entries DataFrame.
+
+        Notes:
+            This method filters phenotype entries based on frequency constraints until the maximum number is reached.
+            It sets a time limit for execution and handles timeouts by returning filtered results or sampled data.
+        """
         time_limit = 15
         signal.signal(signal.SIGALRM, handler)
         signal.alarm(time_limit)
@@ -244,30 +400,81 @@ class SyntheticPatientGenerator:
         finally:
             signal.alarm(0)
 
-    def get_patient_terms(self):
-        """Get patient terms, filtered on frequency thresholds."""
+    def get_patient_terms(self) -> pl.DataFrame:
+        """
+        Get patient terms filtered on frequency thresholds.
+
+        Returns:
+            pl.DataFrame: DataFrame containing patient terms filtered on frequency thresholds.
+
+        Notes:
+            This method retrieves patient terms by applying various filters based on frequency thresholds.
+            It shuffles the dataframe, adds frequency information, and filters phenotype entries
+            based on frequency constraints to obtain patient terms.
+        """
         return self.filter_phenotype_entries(
             self.shuffle_dataframe(self.add_frequency()), self.get_number_of_terms()
         )
 
-    def get_number_of_terms_to_randomise(self, patient_terms: pl.DataFrame):
-        """Get number of terms to randomise from filtered frequency set."""
+    def get_number_of_terms_to_randomise(self, patient_terms: pl.DataFrame) -> int:
+        """
+        Get the number of terms to randomise from the filtered frequency set.
+
+        Args:
+            patient_terms (pl.DataFrame): DataFrame containing the filtered frequency set of patient terms.
+
+        Returns:
+            int: Number of terms to be randomly selected from the filtered frequency set.
+        """
         return self.secret_rand.randint(0, int(len(patient_terms)))
 
-    def get_number_of_steps_for_randomisation(self):
-        """Get the number of steps to take in range 1-5 for making a term more/less specific."""
+    def get_number_of_steps_for_randomisation(self) -> int:
+        """
+        Get the number of steps to take in the range of 1-5 for making a term more or less specific.
+
+        Returns:
+            int: Number of steps to adjust a term's specificity during randomization (1 to 5).
+        """
         return self.secret_rand.randint(1, 5)
 
-    def return_less_or_more_specific(self):
-        """Generate a float between 0-1."""
+    def return_less_or_more_specific(self) -> float:
+        """
+        Generate a random float between 0 and 1.
+
+        Returns:
+            float: A random float value between 0 and 1.
+        """
         return self.secret_rand.random()
 
-    def subsample_patient_terms(self, patient_terms: pl.dataframe):
-        """Get a subsample of patient terms to make more/less specific."""
+    def subsample_patient_terms(self, patient_terms: pl.dataframe) -> pl.dataframe:
+        """
+        Get a subsample of patient terms to make more or less specific.
+
+
+        Args:
+            patient_terms (pl.DataFrame): DataFrame containing patient terms.
+
+        Returns:
+            pl.DataFrame: Subsample of patient terms for making more or less specific.
+        """
         return patient_terms.sample(self.get_number_of_terms_to_randomise(patient_terms))
 
-    def get_children_of_term(self, phenotype_entry: dict, steps: int):
-        """Get a child term of a hpo id from the number of steps specified."""
+    def get_children_of_term(self, phenotype_entry: dict, steps: int) -> dict:
+        """
+        Get a child term of an HPO ID from the specified number of steps.
+
+        Args:
+            phenotype_entry (dict): A dictionary representing an HPO phenotype entry.
+            steps (int): The number of steps to search for child terms.
+
+        Returns:
+            dict: A dictionary representing the updated phenotype entry with a new HPO ID.
+
+        Notes:
+            This method retrieves a child term of an HPO ID based on the specified number of steps.
+            It iterates through the ontology to find descendants of the given HPO ID
+            and selects a child term randomly if available within the specified steps.
+        """
         term_id = phenotype_entry["hpo_id"]
         for _i in range(steps):
             descendants = self.ontology_factory.children(term_id)
@@ -278,8 +485,22 @@ class SyntheticPatientGenerator:
         phenotype_entry["hpo_id"] = term_id
         return phenotype_entry
 
-    def get_parents_of_terms(self, phenotype_entry: dict, steps: int):
-        """Get a parent term of a hpo id from the number of steps specified."""
+    def get_parents_of_terms(self, phenotype_entry: dict, steps: int) -> dict:
+        """
+        Get a parent term of an HPO ID from the specified number of steps.
+
+        Args:
+            phenotype_entry (dict): A dictionary representing an HPO phenotype entry.
+            steps (int): The number of steps to search for parent terms.
+
+        Returns:
+            dict: A dictionary representing the updated phenotype entry with a new HPO ID.
+
+        Notes:
+            This method retrieves a parent term of an HPO ID based on the specified number of steps.
+            It iterates through the ontology to find hierarchical parents of the given HPO ID
+            and selects a parent term randomly if available within the specified steps.
+        """
         term_id = phenotype_entry["hpo_id"]
         rels = self.ontology.entity_alias_map(term_id)
         term = "".join(rels[(list(rels.keys())[0])])
@@ -302,16 +523,41 @@ class SyntheticPatientGenerator:
         return phenotype_entry
 
     @staticmethod
-    def remove_terms_to_be_randomised(patient_terms: pl.DataFrame, subset: pl.DataFrame):
-        """Remove terms selected to be randomised from patient terms."""
+    def remove_terms_to_be_randomised(
+        patient_terms: pl.DataFrame, subset: pl.DataFrame
+    ) -> pl.DataFrame:
+        """
+        Remove terms selected for randomisation from patient terms.
+
+        Args:
+            patient_terms (pl.DataFrame): DataFrame containing patient terms.
+            subset (pl.DataFrame): DataFrame representing terms selected for randomisation.
+
+        Returns:
+            pl.DataFrame: DataFrame with selected terms removed for randomisation.
+        """
         subset_list = subset.to_dicts()
         for phenotype_entry in subset_list:
             patient_terms = patient_terms.filter(pl.col("hpo_id") != phenotype_entry["hpo_id"])
         return patient_terms
 
-    def alter_term_specificity(self, new_phenotype_terms: [dict], phenotype_entry: dict):
-        """Alter the hpo id specificity - making less specific if the float is less than 0.5,
-        otherwise the term is made more specific."""
+    def alter_term_specificity(
+        self, new_phenotype_terms: List[dict], phenotype_entry: dict
+    ) -> List[dict]:
+        """
+        Alter the specificity of the HPO ID.
+
+        Args:
+            new_phenotype_terms (List[dict]): List containing updated phenotype terms.
+            phenotype_entry (dict): A dictionary representing an HPO phenotype entry.
+
+        Returns:
+            List[dict]: Updated list of phenotype terms with altered specificity.
+
+        Notes:
+            This method adjusts the specificity of the HPO ID by making it less specific
+            if a randomly generated float is less than 0.5; otherwise, it makes the term more specific.
+        """
         if self.return_less_or_more_specific() < 0.5:
             new_phenotype_terms.append(
                 self.get_parents_of_terms(
@@ -326,8 +572,20 @@ class SyntheticPatientGenerator:
             )
         return new_phenotype_terms
 
-    def patient_term_annotation_set(self):
-        """Get the final patient term annotation set."""
+    def patient_term_annotation_set(self) -> pl.DataFrame:
+        """
+        Get the final patient term annotation set.
+
+        This method generates the final set of patient term annotations by performing the following steps:
+        1. Retrieves patient terms and returns them if only one term is present.
+        2. Sub-samples patient terms to create a smaller subset.
+        3. Alters the specificity of each phenotype entry in the subset.
+        4. Removes terms selected for randomisation from the full patient terms.
+        5. Combines the altered terms with the filtered terms to form the final patient term set.
+
+        Returns:
+            pl.DataFrame: DataFrame containing the final patient term annotation set.
+        """
         patient_terms = self.get_patient_terms()
         if len(patient_terms) == 1:
             return patient_terms
@@ -343,12 +601,31 @@ class SyntheticPatientGenerator:
 
 
 class PhenotypeAnnotationToPhenopacketConverter:
-    def __init__(self, human_phenotype_ontology):
+    """Class for converting a set of phenotype annotations to a phenopacket format."""
+
+    def __init__(self, human_phenotype_ontology: ProntoImplementation):
+        """
+        Initialise the PhenotypeAnnotationToPhenopacketConverter class.
+
+        Args:
+            human_phenotype_ontology (ProntoImplementation): An instance of ProntoImplementation
+            containing the loaded HPO.
+        """
+
         self.human_phenotype_ontology = human_phenotype_ontology
         self.secrets_random_num = secrets.SystemRandom()
 
     def create_individual(self, onset_range: OnsetTerm = None) -> Individual:
-        """Create an Individual object."""
+        """
+        Create an Individual object.
+
+        Args:
+            onset_range (OnsetTerm, optional): An OnsetTerm object representing the age range of onset.
+            Defaults to None.
+
+        Returns:
+            Individual: An instance of the Individual class.
+        """
         age = (
             self.secrets_random_num.randint(onset_range.lower_age, onset_range.upper_age)
             if onset_range is not None
@@ -364,7 +641,17 @@ class PhenotypeAnnotationToPhenopacketConverter:
         )
 
     def create_onset(self, phenotype_annotation_entry: dict) -> TimeElement:
-        """Create an Onset object."""
+        """
+        Create an Onset object.
+
+        This method creates a TimeElement representing the onset information for a phenotype annotation entry.
+
+        Args:
+            phenotype_annotation_entry (dict): A dictionary representing a phenotype annotation entry.
+
+        Returns:
+            TimeElement or None: An instance of TimeElement if onset information is available, else None.
+        """
         if phenotype_annotation_entry["onset"] is not None:
             rels = self.human_phenotype_ontology.entity_alias_map(
                 phenotype_annotation_entry["onset"]
@@ -376,8 +663,19 @@ class PhenotypeAnnotationToPhenopacketConverter:
         else:
             return None
 
-    def create_modifier(self, phenotype_annotation_entry: dict) -> [OntologyClass]:
-        """Create a Modifier."""
+    def create_modifier(self, phenotype_annotation_entry: dict) -> List[OntologyClass]:
+        """
+        Create a Modifier.
+
+        This method creates an OntologyClass representing the modifier information for a phenotype annotation entry.
+
+        Args:
+            phenotype_annotation_entry (dict): A dictionary representing a phenotype annotation entry.
+
+        Returns:
+            list[OntologyClass] or None: A list containing an OntologyClass if modifier information exists,
+                                          otherwise returns None.
+        """
         if phenotype_annotation_entry["modifier"] is not None:
             try:
                 rels = self.human_phenotype_ontology.entity_alias_map(
@@ -391,7 +689,18 @@ class PhenotypeAnnotationToPhenopacketConverter:
             return None
 
     def create_phenotypic_feature(self, phenotype_annotation_entry: dict) -> PhenotypicFeature:
-        """Create a PhenotypicFeature object."""
+        """
+        Create a PhenotypicFeature object.
+
+        This method generates a PhenotypicFeature object based on a phenotype annotation entry.
+
+        Args:
+            phenotype_annotation_entry (dict): A dictionary representing a phenotype annotation entry.
+
+        Returns:
+            PhenotypicFeature or None: An instance of PhenotypicFeature if the aspect is 'P' (phenotypic),
+            otherwise None.
+        """
         if phenotype_annotation_entry["aspect"] == "P":
             rels = self.human_phenotype_ontology.entity_alias_map(
                 phenotype_annotation_entry["hpo_id"]
@@ -406,8 +715,18 @@ class PhenotypeAnnotationToPhenopacketConverter:
         else:
             return None
 
-    def create_phenotypic_features(self, omim_disease_df: pl.DataFrame):
-        """Create a list of phenotypic features."""
+    def create_phenotypic_features(self, omim_disease_df: pl.DataFrame) -> List[PhenotypicFeature]:
+        """
+        Create a list of phenotypic features.
+
+        This method generates a list of PhenotypicFeature objects based on a DataFrame of OMIM disease entries.
+
+        Args:
+            omim_disease_df (pl.DataFrame): DataFrame containing OMIM disease entries.
+
+        Returns:
+            List[PhenotypicFeature]: A list of PhenotypicFeature objects derived from the provided DataFrame.
+        """
         phenotypic_features = []
         for phenotype_annotation_entry in omim_disease_df.rows(named=True):
             phenotypic_feature = self.create_phenotypic_feature(phenotype_annotation_entry)
@@ -417,7 +736,14 @@ class PhenotypeAnnotationToPhenopacketConverter:
 
     @staticmethod
     def create_disease(phenotype_annotation_entry: dict) -> Disease:
-        """Create a Disease object."""
+        """
+        Create a Disease object.
+        Args:
+            phenotype_annotation_entry (dict): A dictionary representing a phenotype annotation entry.
+
+        Returns:
+            Disease: An instance of Disease representing the disease information.
+        """
         return Disease(
             term=OntologyClass(
                 id=phenotype_annotation_entry["database_id"],
@@ -427,7 +753,12 @@ class PhenotypeAnnotationToPhenopacketConverter:
 
     @staticmethod
     def create_omim_resource() -> Resource:
-        """Create OMIM resource."""
+        """
+        Create OMIM resource.
+
+        Returns:
+            Resource: An instance of Resource representing the OMIM database resource.
+        """
         return Resource(
             id="omim",
             name="Online Mendelian Inheritance in Man",
@@ -439,7 +770,12 @@ class PhenotypeAnnotationToPhenopacketConverter:
 
     @staticmethod
     def create_human_phenotype_ontology_resource(hpoa_version: str) -> Resource:
-        """Create human phenotype ontology resource."""
+        """
+        Create human phenotype ontology resource.
+
+        Returns:
+            Resource: An instance of Resource representing the human phenotype ontology resource.
+        """
         return Resource(
             id="hp",
             name="human phenotype ontology",
@@ -450,7 +786,18 @@ class PhenotypeAnnotationToPhenopacketConverter:
         )
 
     def create_metadata(self, hpoa_version: str) -> MetaData:
-        """Create metadata"""
+        """
+        Create metadata.
+
+        This method generates metadata for a Phenopacket including timestamp, creator information,
+        associated resources, and Phenopacket schema version.
+
+        Args:
+            hpoa_version (str): Version of the Human Phenotype Ontology Annotation.
+
+        Returns:
+            MetaData: Metadata information for the Phenopacket.
+        """
         timestamp = Timestamp()
         timestamp.GetCurrentTime()
         return MetaData(
@@ -469,7 +816,21 @@ class PhenotypeAnnotationToPhenopacketConverter:
         hpoa_version: str,
         onset: OnsetTerm = None,
     ) -> PhenopacketFile:
-        """Create a Phenopacket object."""
+        """
+        Create a Phenopacket object.
+
+        This method generates a PhenopacketFile containing a Phenopacket object with information
+        from OMIM disease DataFrame, Human Phenotype Ontology Annotation version, and onset term (if available).
+
+        Args:
+            omim_disease_df (pl.DataFrame): DataFrame containing phenotype annotation disease entries.
+            hpoa_version (str): Version of the Human Phenotype Ontology Annotation.
+            onset (OnsetTerm, optional): An OnsetTerm object representing the age range of onset. Defaults to None.
+
+        Returns:
+            PhenopacketFile: A class instance containing the phenopacket file name and
+            the generated Phenopacket.
+        """
         phenotypic_features = self.create_phenotypic_features(omim_disease_df)
         phenotype_annotation_entry = omim_disease_df.to_dicts()[0]
         return PhenopacketFile(
@@ -487,23 +848,56 @@ class PhenotypeAnnotationToPhenopacketConverter:
 
 
 class PhenopacketUtil:
+    """Phenopacket utility class."""
+
     def __init__(self, phenopacket: Phenopacket):
+        """
+        Initialise the PhenopacketUtil class.
+
+        Args:
+            phenopacket(Phenopacket): The phenopacket object.
+        """
         self.phenopacket = phenopacket
 
-    def return_phenopacket_disease(self) -> [str]:
-        """Return the disease object from a phenopacket."""
+    def return_phenopacket_disease(self) -> Disease:
+        """
+        Return the disease object from a phenopacket.
+
+        Returns:
+            Disease: The proband disease.
+        """
         return self.phenopacket.diseases[0]
 
 
 class PhenopacketInterpretationExtender:
+    """Class for extending the phenopacket interpretations field."""
+
     def __init__(self, phenopacket: Phenopacket):
+        """
+        Initialise the PhenopacketInterpretationExtender class.
+
+        Args:
+            phenopacket(Phenopacket): The phenopacket object.
+        """
         self.phenopacket = phenopacket
 
     @staticmethod
     def create_gene_genomic_interpretation(
         gene_to_phenotype_entry: dict, gene_identifier_updater: GeneIdentifierUpdater
-    ):
-        """Create genomic interpretation for a gene-to-phenotype relationship."""
+    ) -> GenomicInterpretation:
+        """
+        Create genomic interpretation for a gene-to-phenotype relationship.
+
+        This method generates a GenomicInterpretation object based on a gene-to-phenotype relationship entry.
+
+        Args:
+            gene_to_phenotype_entry (dict): A dictionary representing a gene-to-phenotype relationship.
+            gene_identifier_updater (GeneIdentifierUpdater): An instance of GeneIdentifierUpdater.
+
+        Returns:
+            GenomicInterpretation or None: An instance of GenomicInterpretation representing the interpretation
+                                           of the gene-to-phenotype relationship or None if unsuccessful.
+        """
         try:
             gene_symbol = gene_identifier_updater.obtain_gene_symbol_from_identifier(
                 str(gene_to_phenotype_entry["entrez_id"])
@@ -529,8 +923,21 @@ class PhenopacketInterpretationExtender:
         self,
         omim_disease_phenotype_gene_map: pl.DataFrame,
         gene_identifier_updater: GeneIdentifierUpdater,
-    ):
-        """Create list of genomic interpretations for known gene-to-phenotype relationships."""
+    ) -> List[GenomicInterpretation]:
+        """
+        Create a list of genomic interpretations for known gene-to-phenotype relationships.
+
+        This method generates a list of GenomicInterpretation objects based on a DataFrame
+        containing known gene-to-phenotype relationships.
+
+        Args:
+            omim_disease_phenotype_gene_map (pl.DataFrame): DataFrame containing gene-to-phenotype mappings.
+            gene_identifier_updater (GeneIdentifierUpdater): An instance of GeneIdentifierUpdater.
+
+        Returns:
+            List[GenomicInterpretation]: A list of GenomicInterpretation objects representing the interpretations
+                  of gene-to-phenotype relationships.
+        """
         genomic_interpretations = []
         for phenotype_entry in omim_disease_phenotype_gene_map.rows(named=True):
             genomic_interpretation = self.create_gene_genomic_interpretation(
@@ -545,8 +952,22 @@ class PhenopacketInterpretationExtender:
         omim_disease_phenotype_gene_map: pl.DataFrame,
         gene_identifier_updater: GeneIdentifierUpdater,
         disease: Disease,
-    ):
-        """Create a diagnosis object for known gene-to-phenotype relationships."""
+    ) -> Diagnosis:
+        """
+        Create a diagnosis object for known gene-to-phenotype relationships.
+
+        This method generates a Diagnosis object based on known gene-to-phenotype relationships
+        provided in a DataFrame and a Disease object.
+
+        Args:
+            omim_disease_phenotype_gene_map (pl.DataFrame): DataFrame containing gene-to-phenotype mappings.
+            gene_identifier_updater (GeneIdentifierUpdater): An instance of GeneIdentifierUpdater.
+            disease (Disease): An instance of Disease representing the disease information.
+
+        Returns:
+            Diagnosis or None: A Diagnosis object representing the diagnosis based on gene-to-phenotype relationships,
+                               or None if no genomic interpretations were found.
+        """
         genomic_interpretations = self.create_gene_genomic_interpretations(
             omim_disease_phenotype_gene_map, gene_identifier_updater
         )
@@ -566,8 +987,21 @@ class PhenopacketInterpretationExtender:
         self,
         omim_disease_phenotype_gene_map: pl.DataFrame,
         gene_identifier_updater: GeneIdentifierUpdater,
-    ):
-        """Create an interpretation object for known gene-to-phenotype relationships."""
+    ) -> Interpretation:
+        """
+        Create an interpretation object for known gene-to-phenotype relationships.
+
+        This method generates an Interpretation object based on known gene-to-phenotype relationships
+        provided in a DataFrame and a GeneIdentifierUpdater instance.
+
+        Args:
+            omim_disease_phenotype_gene_map (pl.DataFrame): DataFrame containing gene-to-phenotype mappings.
+            gene_identifier_updater (GeneIdentifierUpdater): An instance of GeneIdentifierUpdater.
+
+        Returns:
+            Interpretation or None: An Interpretation object representing the interpretation based on gene-to-phenotype
+                                    relationships, or None if no diagnosis was created.
+        """
         phenopacket_util = PhenopacketUtil(self.phenopacket)
         disease = phenopacket_util.return_phenopacket_disease()
         diagnosis = self.create_gene_diagnosis(
@@ -587,8 +1021,20 @@ class PhenopacketInterpretationExtender:
         self,
         omim_disease_phenotype_gene_map: pl.DataFrame,
         gene_identifier_updater: GeneIdentifierUpdater,
-    ):
-        """Add interpretations to phenopacket."""
+    ) -> Phenopacket:
+        """
+        Add interpretations to a Phenopacket.
+
+        This method adds gene-based interpretations to a copy of the Phenopacket.
+
+        Args:
+            omim_disease_phenotype_gene_map (pl.DataFrame): DataFrame containing gene-to-phenotype mappings.
+            gene_identifier_updater (GeneIdentifierUpdater): An instance of GeneIdentifierUpdater.
+
+        Returns:
+            Phenopacket or None: A copy of the Phenopacket with added gene-based interpretations,
+            or None if interpretations were not created.
+        """
         phenopacket_copy = copy(self.phenopacket)
         interpretations = [
             self.create_gene_interpretation(
