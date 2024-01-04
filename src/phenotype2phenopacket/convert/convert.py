@@ -19,7 +19,15 @@ def convert_to_phenopackets(
     num_disease: int,
     output_dir: Path,
 ):
-    """Convert phenotype annotation file to a set of disease phenopackets."""
+    """
+    Convert a phenotype annotation file to a set of disease-specific phenopackets.
+
+    Args:
+        phenotype_annotation (Path): Path to the phenotype annotation file.
+        num_disease (int): Number of diseases to convert to phenopackets.
+                           If set to 0, processes all available diseases.
+        output_dir (Path): Directory path to write the generated phenopackets.
+    """
     human_phenotype_ontology = load_ontology()
     phenotype_annotation_df = read_phenotype_annotation_file(phenotype_annotation)
     phenotype_annotation_version = get_phenotype_annotation_version(phenotype_annotation)

@@ -20,7 +20,16 @@ from phenotype2phenopacket.utils.utils import all_files
 def get_phenotype_to_disease_entries(
     omim_disease_pg: pl.DataFrame, disease: Disease
 ) -> pl.DataFrame:
-    """Return disease.pg entries that match the OMIM disease ID."""
+    """
+    Return disease.pg entries that match the provided OMIM disease ID.
+
+    Args:
+        omim_disease_pg (pl.DataFrame): DataFrame containing disease.pg entries.
+        disease (Disease): Disease object containing the OMIM disease ID.
+
+    Returns:
+        pl.DataFrame: Filtered DataFrame containing entries matching the OMIM disease ID.
+    """
     return omim_disease_pg.filter(pl.col("database_id") == disease.term.id)
 
 
@@ -30,7 +39,16 @@ def add_genes(
     gene_identifier_updater: GeneIdentifierUpdater,
     output_dir: Path,
 ):
-    """Add known gene to phenotype relationships to the interpretations of a phenopacket."""
+    """
+    Add known gene-to-phenotype relationships to the interpretations of a phenopacket.
+
+    Args:
+        phenopacket_path (Path): Path to the phenopacket file.
+        disease_pg (pl.DataFrame): DataFrame containing disease.pg entries.
+        gene_identifier_updater (GeneIdentifierUpdater): Object for updating gene identifiers.
+        output_dir (Path): Directory to write the updated phenopacket.
+
+    """
     phenopacket = phenopacket_reader(phenopacket_path)
     disease = PhenopacketUtil(phenopacket).return_phenopacket_disease()
     filtered_disease_pg = get_phenotype_to_disease_entries(disease_pg, disease)
@@ -51,7 +69,15 @@ def add_genes(
 def add_genes_to_directory(
     phenopacket_dir: Path, disease_pg: pl.DataFrame, hgnc_data_file: Path, output_dir: Path
 ):
-    """Add known gene to phenotype relationships to the interpretations of a directory phenopackets."""
+    """
+    Add known gene-to-phenotype relationships to the interpretations of a directory of phenopackets.
+
+    Args:
+        phenopacket_dir (Path): Directory containing the phenopacket files.
+        disease_pg (pl.DataFrame): DataFrame containing disease.pg entries.
+        hgnc_data_file (Path): File path to HGNC data file.
+        output_dir (Path): Directory to store the updated phenopackets.
+    """
     hgnc_dict = create_hgnc_dict(hgnc_data_file)
     identifier_map = create_gene_identifier_map(hgnc_data_file)
     gene_identifier_updater = GeneIdentifierUpdater(
