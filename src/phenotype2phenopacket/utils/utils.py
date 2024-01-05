@@ -250,3 +250,5 @@ def filter_diseases(
         return random.choices(
             group_phenotype_annotation(phenotype_annotation_data.df), k=num_disease
         )
+    if num_disease == 0 and omim_id is None and omim_id_list is None:
+        return group_phenotype_annotation(phenotype_annotation_data.df)
