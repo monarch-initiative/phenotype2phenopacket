@@ -32,6 +32,18 @@ You can also limit the number of disease phenopackets converted/created:
 p2p convert --phenotype-annotation /path/to/phenotype.hpoa --output-dir /path/to/output-dir --num-diseases 100
 ```
 
+Or limit for a specific OMIM disease:
+
+```shell
+p2p create --phenotype-annotation /path/to/phenotype.hpoa --output-dir /path/to/output-dir --omim-id OMIM:619340
+```
+
+Or limit for a list of OMIM IDs specified in a text file, with each ID separated by a new line:
+
+```shell
+p2p create --phenotype-annotation /path/to/phenotype.hpoa --output-dir /path/to/output-dir --omim-id-list /path/to/list.txt
+```
+
 To add known gene-to-phenotype relationships to phenopackets:
 
 ```shell
