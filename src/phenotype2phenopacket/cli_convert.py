@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import click
+from pheval.prepare.custom_exceptions import MutuallyExclusiveOptionError
 
 from phenotype2phenopacket.convert.convert import convert_to_phenopackets
 
@@ -20,6 +21,29 @@ from phenotype2phenopacket.convert.convert import convert_to_phenopackets
     help="Number of diseases to create synthetic patient phenopackets for.",
     type=int,
     default=0,
+    cls=MutuallyExclusiveOptionError,
+    mutually_exclusive=["omim_id_list"],
+)
+@click.option(
+    "--omim-id",
+    "-i",
+    required=False,
+    help="OMIM ID to create synthetic patient for",
+    type=str,
+    default=None,
+    cls=MutuallyExclusiveOptionError,
+    mutually_exclusive=["omim_id_list"],
+)
+@click.option(
+    "--omim-id-list",
+    "-l",
+    required=False,
+    help="Path to .txt file containing OMIM IDs to create synthetic patient phenopackets,"
+    "with each OMIM ID separated by a new line.",
+    type=Path,
+    default=None,
+    cls=MutuallyExclusiveOptionError,
+    mutually_exclusive=["omim_id", "num_disease"],
 )
 @click.option(
     "--output-dir",
@@ -30,14 +54,18 @@ from phenotype2phenopacket.convert.convert import convert_to_phenopackets
     default="phenopackets",
     show_default=True,
 )
-def convert_to_phenopackets_command(phenotype_annotation: Path, num_disease: int, output_dir: Path):
+def convert_to_phenopackets_command(
+    phenotype_annotation: Path, num_disease: int, omim_id: str, omim_id_list: Path, output_dir: Path
+):
     """
     Convert a phenotype annotation file to a set of disease phenopackets.
 
     Args:
-        phenotype_annotation (Path): Path to the phenotype annotation file (phenotype.hpoa).
-        num_disease (int): Number of diseases to convert to phenopackets (use 0 for all).
+        phenotype_annotation (Path): Path to the phenotype annotation file.
+        num_disease (int): Number of diseases to create phenopackets (use 0 for all).
+        omim_id (str): OMIM ID to create  phenopacket for
+        omim_id_list (Path): Path to the text file containing OMIM IDs to create synthetic patient phenopackets.
         output_dir (Path): Directory to store the generated phenopackets.
     """
     output_dir.mkdir(exist_ok=True)
-    convert_to_phenopackets(phenotype_annotation, num_disease, output_dir)
+    convert_to_phenopackets(phenotype_annotation, num_disease, omim_id, omim_id_list, output_dir)

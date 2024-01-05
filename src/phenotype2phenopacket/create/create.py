@@ -1,4 +1,3 @@
-import random
 from pathlib import Path
 
 import polars as pl
@@ -11,10 +10,10 @@ from phenotype2phenopacket.utils.phenopacket_utils import (
     write_phenopacket,
 )
 from phenotype2phenopacket.utils.utils import (
-    get_phenotype_annotation_version,
+    filter_diseases,
     load_ontology,
     load_ontology_factory,
-    read_phenotype_annotation_file,
+    return_phenotype_annotation_data,
 )
 
 
@@ -48,7 +47,9 @@ def create_synthetic_patient_phenopacket(
     )
 
 
-def create_synthetic_patients(phenotype_annotation: Path, num_disease: int, output_dir: Path):
+def create_synthetic_patients(
+    phenotype_annotation: Path, num_disease: int, omim_id: str, omim_id_list: Path, output_dir: Path
+):
     """
     Create a set of synthetic patient phenopackets from a phenotype annotation file.
 
@@ -56,24 +57,22 @@ def create_synthetic_patients(phenotype_annotation: Path, num_disease: int, outp
         phenotype_annotation (Path): Path to the phenotype annotation file.
         num_disease (int): Number of diseases to generate synthetic patient phenopackets for.
                            If set to 0, processes all available diseases.
+        omim_id (str) : OMIM ID to generate synthetic patient phenopackets for.
+        omim_id_list (Path) : Path to the list of OMIM IDs to generate synthetic patient phenopackets for.
         output_dir (Path): Directory path to write the generated phenopackets.
 
     """
-    phenotype_annotation_df = read_phenotype_annotation_file(phenotype_annotation)
-    phenotype_annotation_version = get_phenotype_annotation_version(phenotype_annotation)
+    phenotype_annotation_data = return_phenotype_annotation_data(phenotype_annotation)
     human_phenotype_ontology = load_ontology()
     ontology_factory = load_ontology_factory()
-    omim_diseases = phenotype_annotation_df.filter(
-        pl.col("database_id").str.starts_with("OMIM")
-    ).filter(pl.col("aspect") == "P")
-    grouped_omim_diseases = omim_diseases.partition_by(by="database_id", maintain_order=True)
-    if num_disease != 0:
-        grouped_omim_diseases = random.sample(grouped_omim_diseases, num_disease)
+    grouped_omim_diseases = filter_diseases(
+        num_disease, omim_id, omim_id_list, phenotype_annotation_data
+    )
     for omim_disease in grouped_omim_diseases:
         create_synthetic_patient_phenopacket(
             human_phenotype_ontology,
             omim_disease,
             ontology_factory,
             output_dir,
-            phenotype_annotation_version,
+            phenotype_annotation_data.version,
         )
