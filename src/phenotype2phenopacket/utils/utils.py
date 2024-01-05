@@ -1,4 +1,7 @@
+import random
+from dataclasses import dataclass
 from pathlib import Path
+from typing import List
 
 import pandas as pd
 import polars as pl
@@ -109,6 +112,34 @@ def read_phenotype_annotation_file(phenotype_annotation_file_path: Path) -> pl.D
     return pl.read_csv(phenotype_annotation_file_path, separator="\t", comment_char="#")
 
 
+def filter_phenotype_annotation(phenotype_annotation_file_path: Path) -> pl.DataFrame:
+    """
+    Filter the phenotype annotation, retaining data for OMIM diseases describing phenotypye information.
+    Args:
+        phenotype_annotation_file_path (Path): The path to the phenotype annotation file.
+
+    Returns:
+        pl.DataFrame: A Polars DataFrame containing the contents of the filtered phenotype annotation file.
+    """
+    phenotype_annotation_df = read_phenotype_annotation_file(phenotype_annotation_file_path)
+    return phenotype_annotation_df.filter(pl.col("database_id").str.starts_with("OMIM")).filter(
+        pl.col("aspect") == "P"
+    )
+
+
+def group_phenotype_annotation(phenotype_annotation_df: pl.DataFrame) -> List[pl.DataFrame]:
+    """
+    Group the phenotype annotation by database ID.
+
+    Args:
+        phenotype_annotation_df (pl.Dataframe): The filtered phenotype annotation dataframe.
+
+    Returns:
+        List[pl.DataFrame]: A list of Polars DataFrame grouped according to the database ID.
+    """
+    return phenotype_annotation_df.partition_by(by="database_id", maintain_order=True)
+
+
 def get_phenotype_annotation_version(phenotype_annotation_file_path: Path) -> str:
     """
     Read a phenotype annotation file and return the version of the phenotype annotation.
@@ -132,16 +163,90 @@ def get_phenotype_annotation_version(phenotype_annotation_file_path: Path) -> st
     return version
 
 
-def all_files(directory: Path) -> list[Path]:
+@dataclass
+class PhenotypeAnnotation:
     """
-    Obtains all files from a given directory.
+    Class to represent a phenotype annotation data.
+
+    Attributes:
+        df (pl.DataFrame): The phenotype annotation represented as a dataframe.
+        version (str): The version of the phenotype annotation.
+    """
+
+    df: pl.DataFrame
+    version: str
+
+
+def return_phenotype_annotation_data(phenotype_annotation_file_path: Path) -> PhenotypeAnnotation:
+    """
+    Read a phenotype annotation file and return the phenotype annotation data as a Polars dataframe
+    and the version of the phenotype annotation as a PhenotypeAnnotation object.
 
     Args:
-        directory (Path): The directory path.
+        phenotype_annotation_file_path (Path): The path to the phenotype annotation file.
 
     Returns:
-        list[Path]: A list of Path objects representing all files in the directory.
+        PhenotypeAnnotation: The phenotype annotation data object containing the phenotype
+        data for all OMIM diseases and version of the file.
     """
-    files = [path for path in directory.iterdir()]
-    files.sort()
-    return files
+    return PhenotypeAnnotation(
+        df=filter_phenotype_annotation(phenotype_annotation_file_path),
+        version=get_phenotype_annotation_version(phenotype_annotation_file_path),
+    )
+
+
+def read_omim_id_list(omim_id_list_file_path: Path) -> List[str]:
+    """
+    Read a txt file that contains OMIM IDs separated by a new line.
+
+    Args:
+        omim_id_list_file_path (Path): path to the txt file containing OMIM IDs.
+
+    Returns:
+        List[str]: A list of OMIM ids contained in the file.
+    """
+    with open(omim_id_list_file_path) as f:
+        lines = [line.rstrip("\n") for line in f]
+    f.close()
+    return lines
+
+
+def filter_diseases(
+    num_disease: int,
+    omim_id: str,
+    omim_id_list: Path,
+    phenotype_annotation_data: PhenotypeAnnotation,
+) -> List[pl.DataFrame]:
+    """
+    Filter the phenotype annotation data to either only a specific disease, a specific number of diseases,
+    or a list of specific diseases.
+
+    Args:
+        num_disease (int): The number of diseases to be filtered. If set to 0, returns all available diseases.
+        omim_id (str): The specific OMIM ID used to filter diseases. If provided, filters based on this ID.
+        omim_id_list (Path): Path to the file containing OMIM IDs to filter for.
+        phenotype_annotation_data (PhenotypeAnnotation): The PhenotypeAnnotation data to be filtered.
+
+    Returns:
+        List[pd.DataFrame]: A list of pandas DataFrames representing the filtered diseases.
+
+    """
+    if omim_id_list is not None:
+        omim_ids = read_omim_id_list(omim_id_list)
+        selected_diseases = []
+        for omim_id in omim_ids:
+            selected_diseases.append(
+                phenotype_annotation_data.df.filter(pl.col("database_id") == omim_id)
+            )
+        return selected_diseases
+    if omim_id is not None:
+        grouped_omim_disease = phenotype_annotation_data.df.filter(pl.col("database_id") == omim_id)
+        return (
+            [grouped_omim_disease.clone() for _ in range(num_disease)]
+            if num_disease != 0
+            else [grouped_omim_disease]
+        )
+    if num_disease != 0 and omim_id is None:
+        return random.choices(
+            group_phenotype_annotation(phenotype_annotation_data.df), k=num_disease
+        )
