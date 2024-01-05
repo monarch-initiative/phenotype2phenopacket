@@ -2,6 +2,7 @@ from pathlib import Path
 
 import polars as pl
 from phenopackets import Disease
+from pheval.utils.file_utils import all_files
 from pheval.utils.phenopacket_utils import (
     GeneIdentifierUpdater,
     create_gene_identifier_map,
@@ -14,7 +15,6 @@ from phenotype2phenopacket.utils.phenopacket_utils import (
     PhenopacketUtil,
     write_phenopacket,
 )
-from phenotype2phenopacket.utils.utils import all_files
 
 
 def get_phenotype_to_disease_entries(
