@@ -479,7 +479,7 @@ class SyntheticPatientGenerator:
             parents = self.ontology.hierarchical_parents(term_id)
             parent = self.secret_rand.choice(parents)
             if not parents:
-                warnings.warn(f"No parents found for term {term}")
+                warnings.warn(f"No parents found for term {term}", stacklevel=2)
                 return phenotype_entry
             rels = self.ontology.entity_alias_map(parent)
             term = "".join(rels[(list(rels.keys())[0])])
