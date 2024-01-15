@@ -1,6 +1,7 @@
 import re
 import secrets
 import signal
+import warnings
 from copy import copy
 from dataclasses import dataclass
 from fractions import Fraction
@@ -477,6 +478,9 @@ class SyntheticPatientGenerator:
         for _i in range(steps):
             parents = self.ontology.hierarchical_parents(term_id)
             parent = self.secret_rand.choice(parents)
+            if not parents:
+                warnings.warn(f"No parents found for term {term}", stacklevel=2)
+                return phenotype_entry
             rels = self.ontology.entity_alias_map(parent)
             term = "".join(rels[(list(rels.keys())[0])])
             if (
