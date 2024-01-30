@@ -868,14 +868,17 @@ class TestSyntheticPatientGenerator(unittest.TestCase):
     def test_alter_term_specificity_less_specific(self):
         mock_return_value = 0.4
         mock_steps_value = 1
-        with patch.object(
-            self.synthetic_patient_generator,
-            "return_less_or_more_specific",
-            return_value=mock_return_value,
-        ), patch.object(
-            self.synthetic_patient_generator,
-            "get_number_of_steps_for_randomisation",
-            side_effect=[mock_steps_value, mock_steps_value],
+        with (
+            patch.object(
+                self.synthetic_patient_generator,
+                "return_less_or_more_specific",
+                return_value=mock_return_value,
+            ),
+            patch.object(
+                self.synthetic_patient_generator,
+                "get_number_of_steps_for_randomisation",
+                side_effect=[mock_steps_value, mock_steps_value],
+            ),
         ):
             altered_phenotype = self.synthetic_patient_generator.alter_term_specificity(
                 [],
@@ -918,14 +921,17 @@ class TestSyntheticPatientGenerator(unittest.TestCase):
     def test_alter_term_specificity_more_specific(self):
         mock_return_value = 0.8
         mock_steps_value = 1
-        with patch.object(
-            self.synthetic_patient_generator,
-            "return_less_or_more_specific",
-            return_value=mock_return_value,
-        ), patch.object(
-            self.synthetic_patient_generator,
-            "get_number_of_steps_for_randomisation",
-            side_effect=[mock_steps_value, mock_steps_value],
+        with (
+            patch.object(
+                self.synthetic_patient_generator,
+                "return_less_or_more_specific",
+                return_value=mock_return_value,
+            ),
+            patch.object(
+                self.synthetic_patient_generator,
+                "get_number_of_steps_for_randomisation",
+                side_effect=[mock_steps_value, mock_steps_value],
+            ),
         ):
             altered_phenotype = self.synthetic_patient_generator.alter_term_specificity(
                 [

@@ -61,9 +61,11 @@ def add_genes(
             omim_disease_phenotype_gene_map=filtered_disease_pg,
             gene_identifier_updater=gene_identifier_updater,
         )
-        write_phenopacket(
-            phenopacket_with_genes, output_dir.joinpath(phenopacket_path.name)
-        ) if phenopacket_with_genes is not None else None
+        (
+            write_phenopacket(phenopacket_with_genes, output_dir.joinpath(phenopacket_path.name))
+            if phenopacket_with_genes is not None
+            else None
+        )
 
 
 def add_genes_to_directory(phenopacket_dir: Path, disease_pg: pl.DataFrame, output_dir: Path):

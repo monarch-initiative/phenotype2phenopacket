@@ -596,9 +596,9 @@ class PhenotypeAnnotationToPhenopacketConverter:
             age = None
         return Individual(
             id="patient1",
-            time_at_last_encounter=TimeElement(age=Age(iso8601duration=f"P{age}Y"))
-            if age is not None
-            else None,
+            time_at_last_encounter=(
+                TimeElement(age=Age(iso8601duration=f"P{age}Y")) if age is not None else None
+            ),
         )
 
     def create_onset(self, phenotype_annotation_entry: dict) -> TimeElement:
@@ -865,9 +865,9 @@ class PhenopacketInterpretationExtender:
             )
             return GenomicInterpretation(
                 subject_or_biosample_id="patient1",
-                interpretation_status=4
-                if gene_to_phenotype_entry["disease_name"].startswith("?") is False
-                else 0,
+                interpretation_status=(
+                    4 if gene_to_phenotype_entry["disease_name"].startswith("?") is False else 0
+                ),
                 gene=GeneDescriptor(
                     value_id=gene_identifier_updater.find_identifier(gene_symbol),
                     symbol=gene_symbol,
