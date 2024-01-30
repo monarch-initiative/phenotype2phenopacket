@@ -1,7 +1,6 @@
 import re
 import secrets
-import signal
-import warnings
+import time
 from copy import copy
 from dataclasses import dataclass
 from fractions import Fraction
@@ -97,10 +96,6 @@ onset_hpo = {
     "HP:0003581": OnsetTerm(16, 80),
     "HP:0025710": OnsetTerm(25, 40),
 }
-
-
-def handler(signum, frame):
-    raise TimeoutError("Took too long to filter terms.")
 
 
 @dataclass
@@ -352,22 +347,19 @@ class SyntheticPatientGenerator:
             It sets a time limit for execution and handles timeouts by returning filtered results or sampled data.
         """
         time_limit = 15
-        signal.signal(signal.SIGALRM, handler)
-        signal.alarm(time_limit)
-        try:
-            while len(self.filtered_df) < max_number:
-                for phenotype_entry in frequency_df.rows(named=True):
-                    if len(self.filtered_df) >= max_number:
-                        break
-                    self.check_frequency(phenotype_entry)
-            return pl.from_dicts(self.filtered_df)
-        except TimeoutError:
-            if len(self.filtered_df) == 0:
-                return frequency_df.sample(n=max_number)
-            else:
-                return pl.from_dicts(self.filtered_df)
-        finally:
-            signal.alarm(0)
+        start_time = time.time()
+        while len(self.filtered_df) < max_number:
+            for phenotype_entry in frequency_df.rows(named=True):
+                if len(self.filtered_df) >= max_number:
+                    break
+                elapsed_time = time.time() - start_time
+                if elapsed_time > time_limit:
+                    if len(self.filtered_df) == 0:
+                        return frequency_df.sample(n=max_number)
+                    else:
+                        return pl.from_dicts(self.filtered_df)
+                self.check_frequency(phenotype_entry)
+        return pl.from_dicts(self.filtered_df)
 
     def get_patient_terms(self) -> pl.DataFrame:
         """
@@ -478,9 +470,6 @@ class SyntheticPatientGenerator:
         for _i in range(steps):
             parents = self.ontology.hierarchical_parents(term_id)
             parent = self.secret_rand.choice(parents)
-            if not parents:
-                warnings.warn(f"No parents found for term {term}", stacklevel=2)
-                return phenotype_entry
             rels = self.ontology.entity_alias_map(parent)
             term = "".join(rels[(list(rels.keys())[0])])
             if (
