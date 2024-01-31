@@ -1,6 +1,6 @@
 import re
 import secrets
-import signal
+import threading
 import warnings
 from copy import copy
 from dataclasses import dataclass
@@ -97,10 +97,6 @@ onset_hpo = {
     "HP:0003581": OnsetTerm(16, 80),
     "HP:0025710": OnsetTerm(25, 40),
 }
-
-
-def handler(signum, frame):
-    raise TimeoutError("Took too long to filter terms.")
 
 
 @dataclass
@@ -352,22 +348,32 @@ class SyntheticPatientGenerator:
             It sets a time limit for execution and handles timeouts by returning filtered results or sampled data.
         """
         time_limit = 15
-        signal.signal(signal.SIGALRM, handler)
-        signal.alarm(time_limit)
-        try:
-            while len(self.filtered_df) < max_number:
-                for phenotype_entry in frequency_df.rows(named=True):
-                    if len(self.filtered_df) >= max_number:
-                        break
-                    self.check_frequency(phenotype_entry)
-            return pl.from_dicts(self.filtered_df)
-        except TimeoutError:
+
+        def worker():
+            try:
+                while len(self.filtered_df) < max_number:
+                    for phenotype_entry in frequency_df.rows(named=True):
+                        if len(self.filtered_df) >= max_number:
+                            break
+                        self.check_frequency(phenotype_entry)
+            except Exception as e:
+                print("Error in worker thread:", e)
+
+        thread = threading.Thread(target=worker)
+        thread.daemon = True
+        stop_event = threading.Event()
+        thread.start()
+        thread.join(timeout=time_limit)
+
+        if thread.is_alive():
+            stop_event.set()
+            print("Timed out!")
             if len(self.filtered_df) == 0:
                 return frequency_df.sample(n=max_number)
             else:
                 return pl.from_dicts(self.filtered_df)
-        finally:
-            signal.alarm(0)
+        else:
+            return pl.from_dicts(self.filtered_df)
 
     def get_patient_terms(self) -> pl.DataFrame:
         """
@@ -477,10 +483,10 @@ class SyntheticPatientGenerator:
             return phenotype_entry
         for _i in range(steps):
             parents = self.ontology.hierarchical_parents(term_id)
-            parent = self.secret_rand.choice(parents)
             if not parents:
                 warnings.warn(f"No parents found for term {term}", stacklevel=2)
                 return phenotype_entry
+            parent = self.secret_rand.choice(parents)
             rels = self.ontology.entity_alias_map(parent)
             term = "".join(rels[(list(rels.keys())[0])])
             if (
@@ -607,9 +613,9 @@ class PhenotypeAnnotationToPhenopacketConverter:
             age = None
         return Individual(
             id="patient1",
-            time_at_last_encounter=TimeElement(age=Age(iso8601duration=f"P{age}Y"))
-            if age is not None
-            else None,
+            time_at_last_encounter=(
+                TimeElement(age=Age(iso8601duration=f"P{age}Y")) if age is not None else None
+            ),
         )
 
     def create_onset(self, phenotype_annotation_entry: dict) -> TimeElement:
@@ -876,9 +882,9 @@ class PhenopacketInterpretationExtender:
             )
             return GenomicInterpretation(
                 subject_or_biosample_id="patient1",
-                interpretation_status=4
-                if gene_to_phenotype_entry["disease_name"].startswith("?") is False
-                else 0,
+                interpretation_status=(
+                    4 if gene_to_phenotype_entry["disease_name"].startswith("?") is False else 0
+                ),
                 gene=GeneDescriptor(
                     value_id=gene_identifier_updater.find_identifier(gene_symbol),
                     symbol=gene_symbol,
