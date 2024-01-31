@@ -1,6 +1,7 @@
 import re
 import secrets
-import time
+import threading
+import warnings
 from copy import copy
 from dataclasses import dataclass
 from fractions import Fraction
@@ -347,19 +348,32 @@ class SyntheticPatientGenerator:
             It sets a time limit for execution and handles timeouts by returning filtered results or sampled data.
         """
         time_limit = 15
-        start_time = time.time()
-        while len(self.filtered_df) < max_number:
-            for phenotype_entry in frequency_df.rows(named=True):
-                if len(self.filtered_df) >= max_number:
-                    break
-                elapsed_time = time.time() - start_time
-                if elapsed_time > time_limit:
-                    if len(self.filtered_df) == 0:
-                        return frequency_df.sample(n=max_number)
-                    else:
-                        return pl.from_dicts(self.filtered_df)
-                self.check_frequency(phenotype_entry)
-        return pl.from_dicts(self.filtered_df)
+
+        def worker():
+            try:
+                while len(self.filtered_df) < max_number:
+                    for phenotype_entry in frequency_df.rows(named=True):
+                        if len(self.filtered_df) >= max_number:
+                            break
+                        self.check_frequency(phenotype_entry)
+            except Exception as e:
+                print("Error in worker thread:", e)
+
+        thread = threading.Thread(target=worker)
+        thread.daemon = True
+        stop_event = threading.Event()
+        thread.start()
+        thread.join(timeout=time_limit)
+
+        if thread.is_alive():
+            stop_event.set()
+            print("Timed out!")
+            if len(self.filtered_df) == 0:
+                return frequency_df.sample(n=max_number)
+            else:
+                return pl.from_dicts(self.filtered_df)
+        else:
+            return pl.from_dicts(self.filtered_df)
 
     def get_patient_terms(self) -> pl.DataFrame:
         """
@@ -469,6 +483,9 @@ class SyntheticPatientGenerator:
             return phenotype_entry
         for _i in range(steps):
             parents = self.ontology.hierarchical_parents(term_id)
+            if not parents:
+                warnings.warn(f"No parents found for term {term}", stacklevel=2)
+                return phenotype_entry
             parent = self.secret_rand.choice(parents)
             rels = self.ontology.entity_alias_map(parent)
             term = "".join(rels[(list(rels.keys())[0])])
