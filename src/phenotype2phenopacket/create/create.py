@@ -22,6 +22,7 @@ def create_synthetic_patient_phenopacket(
     omim_disease: pl.DataFrame,
     ontology_factory: Ontology,
     output_dir: Path,
+    pt_id: str,
     hpoa_version: str,
 ):
     """

@@ -593,7 +593,9 @@ class PhenotypeAnnotationToPhenopacketConverter:
         self.human_phenotype_ontology = human_phenotype_ontology
         self.secrets_random_num = secrets.SystemRandom()
 
-    def create_individual(self, onset_range: OnsetTerm = None) -> Individual:
+    def create_individual(self,
+                          onset_range: OnsetTerm = None,
+                          pt_id: str = "patient1") -> Individual:
         """
         Create an Individual object.
 
@@ -612,7 +614,7 @@ class PhenotypeAnnotationToPhenopacketConverter:
         if onset_range is None or onset_range.upper_age == 0 and onset_range.lower_age == 0:
             age = None
         return Individual(
-            id="patient1",
+            id="patient1" if pt_id is None else pt_id,
             time_at_last_encounter=(
                 TimeElement(age=Age(iso8601duration=f"P{age}Y")) if age is not None else None
             ),
@@ -792,6 +794,7 @@ class PhenotypeAnnotationToPhenopacketConverter:
         self,
         omim_disease_df: pl.DataFrame,
         hpoa_version: str,
+        pt_id: str,
         onset: OnsetTerm = None,
     ) -> PhenopacketFile:
         """
@@ -803,6 +806,7 @@ class PhenotypeAnnotationToPhenopacketConverter:
         Args:
             omim_disease_df (pl.DataFrame): DataFrame containing phenotype annotation disease entries.
             hpoa_version (str): Version of the Human Phenotype Ontology Annotation.
+            pt_id (str): The patient ID. If not given, defaults to "patient1" in create_individual()
             onset (OnsetTerm, optional): An OnsetTerm object representing the age range of onset. Defaults to None.
 
         Returns:
@@ -814,7 +818,7 @@ class PhenotypeAnnotationToPhenopacketConverter:
         return PhenopacketFile(
             phenopacket=Phenopacket(
                 id=phenotype_annotation_entry["disease_name"].lower().replace(" ", "_"),
-                subject=self.create_individual(onset),
+                subject=self.create_individual(onset, pt_id),
                 phenotypic_features=phenotypic_features,
                 diseases=[self.create_disease(phenotype_annotation_entry)],
                 meta_data=self.create_metadata(hpoa_version),
