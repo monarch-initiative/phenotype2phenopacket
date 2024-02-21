@@ -593,9 +593,9 @@ class PhenotypeAnnotationToPhenopacketConverter:
         self.human_phenotype_ontology = human_phenotype_ontology
         self.secrets_random_num = secrets.SystemRandom()
 
-    def create_individual(self,
-                          onset_range: OnsetTerm = None,
-                          pt_id: str = "patient1") -> Individual:
+    def create_individual(
+        self, onset_range: OnsetTerm = None, pt_id: str = "patient1"
+    ) -> Individual:
         """
         Create an Individual object.
 
