@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import polars as pl
+from phenopackets import Disease
 from pheval.utils.file_utils import all_files
 from pheval.utils.phenopacket_utils import (
     GeneIdentifierUpdater,
@@ -9,7 +10,6 @@ from pheval.utils.phenopacket_utils import (
     phenopacket_reader,
 )
 
-from phenopackets import Disease
 from phenotype2phenopacket.utils.phenopacket_utils import (
     PhenopacketInterpretationExtender,
     PhenopacketUtil,

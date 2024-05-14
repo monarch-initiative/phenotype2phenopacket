@@ -11,8 +11,6 @@ from typing import List, Union
 import polars as pl
 from google.protobuf.timestamp_pb2 import Timestamp
 from oaklib.implementations import ProntoImplementation
-from pheval.utils.phenopacket_utils import GeneIdentifierUpdater, create_json_message
-
 from phenopackets import (
     Age,
     Diagnosis,
@@ -28,6 +26,8 @@ from phenopackets import (
     Resource,
     TimeElement,
 )
+from pheval.utils.phenopacket_utils import GeneIdentifierUpdater, create_json_message
+
 from phenotype2phenopacket.utils.utils import is_float
 
 
