@@ -11,7 +11,8 @@ from typing import List, Union
 import polars as pl
 from google.protobuf.timestamp_pb2 import Timestamp
 from oaklib.implementations import ProntoImplementation
-from ontobio import Ontology
+from pheval.utils.phenopacket_utils import GeneIdentifierUpdater, create_json_message
+
 from phenopackets import (
     Age,
     Diagnosis,
@@ -27,8 +28,6 @@ from phenopackets import (
     Resource,
     TimeElement,
 )
-from pheval.utils.phenopacket_utils import GeneIdentifierUpdater, create_json_message
-
 from phenotype2phenopacket.utils.utils import is_float
 
 
@@ -150,21 +149,17 @@ def write_phenopacket(phenopacket: Phenopacket, output_file: Path) -> None:
 class SyntheticPatientGenerator:
     """Class for generating synthetic patients."""
 
-    def __init__(
-        self, disease_df: pl.DataFrame, ontology: ProntoImplementation, ontology_factory: Ontology
-    ):
+    def __init__(self, disease_df: pl.DataFrame, ontology: ProntoImplementation):
         """
         Initialise the SyntheticPatientGenerator class
 
         Args:
             disease_df (pl.DataFrame): The dataframe containing the annotation data for a specific disease.
             ontology (ProntoImplementation): An instance of ProntoImplementation containing the loaded HPO.
-            ontology_factory (Ontology): Created ontology from OntologyFactory
 
         """
         self.disease_df = disease_df
         self.ontology = ontology
-        self.ontology_factory = ontology_factory
         self.lower_age = 0
         self.upper_age = 0
         self.filtered_df = []
@@ -452,9 +447,9 @@ class SyntheticPatientGenerator:
         """
         term_id = phenotype_entry["hpo_id"]
         for _i in range(steps):
-            descendants = self.ontology_factory.children(term_id)
+            descendants = list(self.ontology.incoming_relationships(term_id))
             if descendants:
-                term_id = self.secret_rand.choice(descendants)
+                term_id = self.secret_rand.choice(descendants)[1]
             else:
                 break
         phenotype_entry["hpo_id"] = term_id
@@ -602,6 +597,7 @@ class PhenotypeAnnotationToPhenopacketConverter:
         Args:
             onset_range (OnsetTerm, optional): An OnsetTerm object representing the age range of onset.
             Defaults to None.
+            pt_id (str, optional): An identifier for the patient.
 
         Returns:
             Individual: An instance of the Individual class.
