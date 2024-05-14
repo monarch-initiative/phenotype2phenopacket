@@ -3,6 +3,13 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import polars as pl
+from pheval.utils.phenopacket_utils import (
+    GeneIdentifierUpdater,
+    create_gene_identifier_map,
+    create_hgnc_dict,
+)
+from polars.testing import assert_frame_equal
+
 from phenopackets import (
     Age,
     Diagnosis,
@@ -19,13 +26,6 @@ from phenopackets import (
     Resource,
     TimeElement,
 )
-from pheval.utils.phenopacket_utils import (
-    GeneIdentifierUpdater,
-    create_gene_identifier_map,
-    create_hgnc_dict,
-)
-from polars.testing import assert_frame_equal
-
 from phenotype2phenopacket.utils.phenopacket_utils import (
     OnsetTerm,
     PhenopacketInterpretationExtender,
@@ -34,7 +34,7 @@ from phenotype2phenopacket.utils.phenopacket_utils import (
     SyntheticPatientGenerator,
     create_phenopacket_file_name_from_disease,
 )
-from phenotype2phenopacket.utils.utils import load_ontology, load_ontology_factory
+from phenotype2phenopacket.utils.utils import load_ontology
 
 disease_df = pl.from_dicts(
     [
@@ -298,7 +298,6 @@ class TestSyntheticPatientGenerator(unittest.TestCase):
         cls.synthetic_patient_generator = SyntheticPatientGenerator(
             disease_df=disease_df,
             ontology=load_ontology(),
-            ontology_factory=load_ontology_factory(),
         )
 
     def tearDown(self) -> None:
@@ -746,7 +745,7 @@ class TestSyntheticPatientGenerator(unittest.TestCase):
                     "database_id": "OMIM:612567",
                     "disease_name": "Inflammatory bowel disease 25, early onset, autosomal recessive",
                     "qualifier": None,
-                    "hpo_id": "HP:0009789",
+                    "hpo_id": "HP:0001047",
                     "reference": "PMID:21519361",
                     "evidence": "PCS",
                     "onset": None,
