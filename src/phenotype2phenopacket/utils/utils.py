@@ -5,9 +5,7 @@ from typing import List
 
 import pandas as pd
 import polars as pl
-from oaklib import OntologyResource
-from oaklib.implementations import ProntoImplementation
-from ontobio import Ontology, OntologyFactory
+from oaklib import get_adapter
 
 
 def is_float(element: any) -> bool:
@@ -65,21 +63,9 @@ def load_ontology():
     Load the Human Phenotype Ontology (HPO).
 
     Returns:
-        ProntoImplementation: An instance of ProntoImplementation containing the loaded HPO.
+        An instantiated interface.
     """
-    resource = OntologyResource(slug="hp.obo", local=False)
-    return ProntoImplementation(resource)
-
-
-def load_ontology_factory() -> Ontology:
-    """
-    Load human phenotype ontology factory.
-
-    Returns:
-        Ontology: An instance of the hp Ontology class.
-    """
-    ontology_factory = OntologyFactory()
-    return ontology_factory.create("hp")
+    return get_adapter("sqlite:obo:hp")
 
 
 def read_hgnc_data(hgnc_data_file: Path) -> pd.DataFrame:
@@ -114,7 +100,7 @@ def read_phenotype_annotation_file(phenotype_annotation_file_path: Path) -> pl.D
 
 def filter_phenotype_annotation(phenotype_annotation_file_path: Path) -> pl.DataFrame:
     """
-    Filter the phenotype annotation, retaining data for OMIM diseases describing phenotypye information.
+    Filter the phenotype annotation, retaining data for OMIM diseases describing phenotype information.
     Args:
         phenotype_annotation_file_path (Path): The path to the phenotype annotation file.
 
