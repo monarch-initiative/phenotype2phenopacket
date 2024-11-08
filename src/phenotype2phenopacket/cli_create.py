@@ -54,8 +54,22 @@ from phenotype2phenopacket.create.create import create_synthetic_patients
     default="phenopackets",
     show_default=True,
 )
+@click.option(
+    "--local-ontology-cache",
+    "-l",
+    metavar="PATH",
+    required=False,
+    help="Path to the local ontology cache, e.g., path to the hp.obo.",
+    default=None,
+    type=Path,
+)
 def create_synthetic_patient_command(
-    phenotype_annotation: Path, num_disease: int, omim_id: str, omim_id_list: Path, output_dir: Path
+    phenotype_annotation: Path,
+    num_disease: int,
+    omim_id: str,
+    omim_id_list: Path,
+    output_dir: Path,
+    local_ontology_cache: Path,
 ):
     """
     Create a set of synthetic patient phenopackets from a phenotype annotation file.
@@ -66,6 +80,9 @@ def create_synthetic_patient_command(
         omim_id (str): OMIM ID to create synthetic patient phenopacket for
         omim_id_list (Path): Path to the text file containing OMIM IDs to create synthetic patient phenopackets.
         output_dir (Path): Directory to store the generated synthetic patient phenopackets.
+        local_ontology_cache (Path): Path to the local ontology cache.
     """
     output_dir.mkdir(exist_ok=True)
-    create_synthetic_patients(phenotype_annotation, num_disease, omim_id, omim_id_list, output_dir)
+    create_synthetic_patients(
+        phenotype_annotation, num_disease, omim_id, omim_id_list, output_dir, local_ontology_cache
+    )
