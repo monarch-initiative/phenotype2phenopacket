@@ -47,7 +47,7 @@ p2p create --phenotype-annotation /path/to/phenotype.hpoa --output-dir /path/to/
 To add known gene-to-phenotype relationships to phenopackets:
 
 ```shell
-p2p add-genes --phenopacket-dir /path/to/synthetic-phenopackets --disease-pg /path/to/disease.pg --hgnc-data /path/to/hgnc_complete_set.txt --output-dir /path/to/output-dir
+p2p add-genes --phenopacket-dir /path/to/synthetic-phenopackets --genes-to-disease /path/to/genes_to_disease.txt --hgnc-data /path/to/hgnc_complete_set.txt --output-dir /path/to/output-dir
 ```
 
-> **_NOTE:_** To add known gene-to-phenotype the Exomiser disease.pg file is expected
+> **_NOTE:_** To add known gene-to-phenotype the genes_to_disease.txt is expected. It can be downloaded [here](https://hpo.jax.org/data/annotations).
