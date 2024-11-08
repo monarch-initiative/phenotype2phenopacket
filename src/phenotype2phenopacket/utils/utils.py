@@ -5,7 +5,8 @@ from typing import List
 
 import pandas as pd
 import polars as pl
-from oaklib import get_adapter
+from oaklib import get_adapter, OntologyResource
+from oaklib.implementations import ProntoImplementation
 
 
 def is_float(element: any) -> bool:
@@ -58,14 +59,19 @@ def read_disease_pg(disease_pg: Path) -> pl.DataFrame:
     return disease.filter(pl.col("database_id").str.starts_with("OMIM"))
 
 
-def load_ontology():
+def load_ontology(local_cached_ontology: Path = None):
     """
     Load the Human Phenotype Ontology (HPO).
-
+    Args:
+        local_cached_ontology(Path): Path to the local cached ontology.
     Returns:
-        An instantiated interface.
+        ProntoImplementation: An instance of ProntoImplementation containing the loaded HPO.
     """
-    return get_adapter("sqlite:obo:hp")
+    if local_cached_ontology is None:
+        return get_adapter("sqlite:obo:hp")
+    else:
+        resource = OntologyResource(slug=str(local_cached_ontology), local=True)
+        return ProntoImplementation(resource)
 
 
 def read_hgnc_data(hgnc_data_file: Path) -> pd.DataFrame:
@@ -198,10 +204,10 @@ def read_omim_id_list(omim_id_list_file_path: Path) -> List[str]:
 
 
 def filter_diseases(
-    num_disease: int,
-    omim_id: str,
-    omim_id_list: Path,
-    phenotype_annotation_data: PhenotypeAnnotation,
+        num_disease: int,
+        omim_id: str,
+        omim_id_list: Path,
+        phenotype_annotation_data: PhenotypeAnnotation,
 ) -> List[pl.DataFrame]:
     """
     Filter the phenotype annotation data to either only a specific disease, a specific number of diseases,
