@@ -202,21 +202,11 @@ disease_df_with_frequency = pl.from_dicts(
 
 gene_to_phenotypes = pl.from_dicts(
     [
+        {"disease_id": "OMIM:612567", "ncbi_gene_id": "NCBIGene:3588", "gene_symbol": "IL10RB"},
         {
-            "database_id": "OMIM:612567",
-            "gene_mim_number": "OMIM:123889",
-            "disease_name": "Inflammatory bowel disease 25, early onset, autosomal recessive",
-            "entrez_id": "3588",
-            "diagnosis_status": "D",
-            "inheritance": "R",
-        },
-        {
-            "database_id": "OMIM:612567",
-            "gene_mim_number": "OMIM:123889",
-            "disease_name": "Inflammatory bowel disease 25, early onset, autosomal recessive",
-            "entrez_id": "1",
-            "diagnosis_status": "D",
-            "inheritance": "R",
+            "disease_id": "OMIM:612567",
+            "ncbi_gene_id": "NCBIGene:1",
+            "gene_symbol": "ADA",
         },
     ]
 )
@@ -1179,12 +1169,9 @@ class TestPhenopacketInterpretationExtender(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.phenopacket = PhenopacketInterpretationExtender(phenopacket)
         cls.phenotype_to_gene_entry = {
-            "database_id": "OMIM:612567",
-            "gene_mim_number": "OMIM:123889",
-            "disease_name": "Inflammatory bowel disease 25, early onset, autosomal recessive",
-            "entrez_id": "3588",
-            "diagnosis_status": "D",
-            "inheritance": "R",
+            "disease_id": "OMIM:612567",
+            "ncbi_gene_id": "NCBIGene:3588",
+            "gene_symbol": "IL10RB",
         }
         cls.gene_identifier_updater = GeneIdentifierUpdater(
             gene_identifier="ensembl_id",
@@ -1224,7 +1211,7 @@ class TestPhenopacketInterpretationExtender(unittest.TestCase):
                 GenomicInterpretation(
                     subject_or_biosample_id="patient1",
                     interpretation_status=4,
-                    gene=GeneDescriptor(value_id="ENSG00000121410", symbol="A1BG"),
+                    gene=GeneDescriptor(value_id="ENSG00000196839", symbol="ADA"),
                 ),
             ],
         )
@@ -1258,7 +1245,7 @@ class TestPhenopacketInterpretationExtender(unittest.TestCase):
                     GenomicInterpretation(
                         subject_or_biosample_id="patient1",
                         interpretation_status=4,
-                        gene=GeneDescriptor(value_id="ENSG00000121410", symbol="A1BG"),
+                        gene=GeneDescriptor(value_id="ENSG00000196839", symbol="ADA"),
                     ),
                 ],
             ),
@@ -1290,7 +1277,7 @@ class TestPhenopacketInterpretationExtender(unittest.TestCase):
                         GenomicInterpretation(
                             subject_or_biosample_id="patient1",
                             interpretation_status=4,
-                            gene=GeneDescriptor(value_id="ENSG00000121410", symbol="A1BG"),
+                            gene=GeneDescriptor(value_id="ENSG00000196839", symbol="ADA"),
                         ),
                     ],
                 ),

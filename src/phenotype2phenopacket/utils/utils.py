@@ -28,35 +28,15 @@ def is_float(element: any) -> bool:
         return False
 
 
-def read_disease_pg(disease_pg: Path) -> pl.DataFrame:
+def read_genes_to_disease(genes_to_disease: Path) -> pl.DataFrame:
     """
-    Read a disease.pg file and return a filtered Polars DataFrame.
-
-    This function reads the contents of a 'disease.pg' file using Polars read_csv method
-    and constructs a DataFrame. It filters the DataFrame to include only rows where the 'database_id'
-    column starts with 'OMIM'.
-
+    Read the genes_to_disease.txt file and return a Polars DataFrame.
     Args:
-        disease_pg (Path): The path to the 'disease.pg' file.
-
+        genes_to_disease (Path): Path to the genes_to_disease.txt file.
     Returns:
-        pl.DataFrame: A filtered Polars DataFrame containing specific columns and rows
-                      where 'database_id' starts with 'OMIM'.
+        pl.DataFrame: A  Polars DataFrame containing the contents of the genes_to_disease.txt.
     """
-    disease = pl.read_csv(
-        disease_pg,
-        separator="|",
-        new_columns=[
-            "database_id",
-            "gene_mim_number",
-            "disease_name",
-            "entrez_id",
-            "diagnosis_status",
-            "inheritance",
-        ],
-        has_header=False,
-    )
-    return disease.filter(pl.col("database_id").str.starts_with("OMIM"))
+    return pl.read_csv(genes_to_disease, sep="\t")
 
 
 def load_ontology(local_cached_ontology: Path = None):

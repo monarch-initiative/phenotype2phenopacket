@@ -3,7 +3,7 @@ from pathlib import Path
 import click
 
 from phenotype2phenopacket.add.add_genes import add_genes_to_directory
-from phenotype2phenopacket.utils.utils import read_disease_pg
+from phenotype2phenopacket.utils.utils import read_genes_to_disease
 
 
 @click.command("add-genes")
@@ -15,10 +15,10 @@ from phenotype2phenopacket.utils.utils import read_disease_pg
     type=Path,
 )
 @click.option(
-    "--disease-pg",
-    "-d",
+    "--genes-to-disease",
+    "-g",
     required=True,
-    help="Path to disease.pg data file.",
+    help="Path to genes_to_disease.txt data file.",
     type=Path,
 )
 @click.option(
@@ -30,7 +30,7 @@ from phenotype2phenopacket.utils.utils import read_disease_pg
 )
 def add_genes_command(
     phenopacket_dir: Path,
-    disease_pg: Path,
+    genes_to_disease: Path,
     output_dir: Path,
 ):
     """
@@ -38,13 +38,13 @@ def add_genes_command(
 
     Args:
         phenopacket_dir (Path): Directory containing the phenopacket files.
-        disease_pg (Path): Path to the disease.pg file.
+        genes_to_disease (Path): Path to the genes_to_disease.txt file.
         output_dir (Path): Directory to store the updated phenopackets.
     """
     output_dir.mkdir(exist_ok=True)
-    disease_pg_df = read_disease_pg(disease_pg)
+    genes_to_disease_df = read_genes_to_disease(genes_to_disease)
     add_genes_to_directory(
         phenopacket_dir,
-        disease_pg_df,
+        genes_to_disease_df,
         output_dir,
     )

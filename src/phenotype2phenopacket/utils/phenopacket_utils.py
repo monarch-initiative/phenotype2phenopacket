@@ -861,7 +861,7 @@ class PhenopacketInterpretationExtender:
 
     @staticmethod
     def create_gene_genomic_interpretation(
-        gene_to_phenotype_entry: dict, gene_identifier_updater: GeneIdentifierUpdater
+        gene_to_disease_entry: dict, gene_identifier_updater: GeneIdentifierUpdater
     ) -> GenomicInterpretation:
         """
         Create genomic interpretation for a gene-to-phenotype relationship.
@@ -869,7 +869,7 @@ class PhenopacketInterpretationExtender:
         This method generates a GenomicInterpretation object based on a gene-to-phenotype relationship entry.
 
         Args:
-            gene_to_phenotype_entry (dict): A dictionary representing a gene-to-phenotype relationship.
+            gene_to_disease_entry (dict): A dictionary representing a gene-to-disease relationship.
             gene_identifier_updater (GeneIdentifierUpdater): An instance of GeneIdentifierUpdater.
 
         Returns:
@@ -877,29 +877,25 @@ class PhenopacketInterpretationExtender:
                                            of the gene-to-phenotype relationship or None if unsuccessful.
         """
         try:
-            gene_symbol = gene_identifier_updater.obtain_gene_symbol_from_identifier(
-                str(gene_to_phenotype_entry["entrez_id"])
-            )
+            gene_symbol = gene_to_disease_entry["gene_symbol"]
             return GenomicInterpretation(
                 subject_or_biosample_id="patient1",
-                interpretation_status=(
-                    4 if gene_to_phenotype_entry["disease_name"].startswith("?") is False else 0
-                ),
+                interpretation_status=4,
                 gene=GeneDescriptor(
                     value_id=gene_identifier_updater.find_identifier(gene_symbol),
                     symbol=gene_symbol,
                 ),
             )
         except KeyError:
-            print(f"Unable to find gene_symbol for {gene_to_phenotype_entry['entrez_id']}")
+            print(f"Unable to find gene_symbol for {gene_to_disease_entry['entrez_id']}")
             return None
         except TypeError:
-            print("N/A value", gene_to_phenotype_entry)
+            print("N/A value", gene_to_disease_entry)
             return None
 
     def create_gene_genomic_interpretations(
         self,
-        omim_disease_phenotype_gene_map: pl.DataFrame,
+        genes_to_disease_map: pl.DataFrame,
         gene_identifier_updater: GeneIdentifierUpdater,
     ) -> List[GenomicInterpretation]:
         """
@@ -909,7 +905,7 @@ class PhenopacketInterpretationExtender:
         containing known gene-to-phenotype relationships.
 
         Args:
-            omim_disease_phenotype_gene_map (pl.DataFrame): DataFrame containing gene-to-phenotype mappings.
+            genes_to_disease_map (pl.DataFrame): DataFrame containing gene-to-disease mappings.
             gene_identifier_updater (GeneIdentifierUpdater): An instance of GeneIdentifierUpdater.
 
         Returns:
@@ -917,9 +913,9 @@ class PhenopacketInterpretationExtender:
                   of gene-to-phenotype relationships.
         """
         genomic_interpretations = []
-        for phenotype_entry in omim_disease_phenotype_gene_map.rows(named=True):
+        for disease_entry in genes_to_disease_map.rows(named=True):
             genomic_interpretation = self.create_gene_genomic_interpretation(
-                phenotype_entry, gene_identifier_updater
+                disease_entry, gene_identifier_updater
             )
             if genomic_interpretation is not None:
                 genomic_interpretations.append(genomic_interpretation)
@@ -927,7 +923,7 @@ class PhenopacketInterpretationExtender:
 
     def create_gene_diagnosis(
         self,
-        omim_disease_phenotype_gene_map: pl.DataFrame,
+        genes_to_disease_map: pl.DataFrame,
         gene_identifier_updater: GeneIdentifierUpdater,
         disease: Disease,
     ) -> Diagnosis:
@@ -938,7 +934,7 @@ class PhenopacketInterpretationExtender:
         provided in a DataFrame and a Disease object.
 
         Args:
-            omim_disease_phenotype_gene_map (pl.DataFrame): DataFrame containing gene-to-phenotype mappings.
+            genes_to_disease_map (pl.DataFrame): DataFrame containing gene-to-disease mappings.
             gene_identifier_updater (GeneIdentifierUpdater): An instance of GeneIdentifierUpdater.
             disease (Disease): An instance of Disease representing the disease information.
 
@@ -947,7 +943,7 @@ class PhenopacketInterpretationExtender:
                                or None if no genomic interpretations were found.
         """
         genomic_interpretations = self.create_gene_genomic_interpretations(
-            omim_disease_phenotype_gene_map, gene_identifier_updater
+            genes_to_disease_map, gene_identifier_updater
         )
         return (
             Diagnosis(
@@ -963,7 +959,7 @@ class PhenopacketInterpretationExtender:
 
     def create_gene_interpretation(
         self,
-        omim_disease_phenotype_gene_map: pl.DataFrame,
+        genes_to_disease_map: pl.DataFrame,
         gene_identifier_updater: GeneIdentifierUpdater,
     ) -> Interpretation:
         """
@@ -973,7 +969,7 @@ class PhenopacketInterpretationExtender:
         provided in a DataFrame and a GeneIdentifierUpdater instance.
 
         Args:
-            omim_disease_phenotype_gene_map (pl.DataFrame): DataFrame containing gene-to-phenotype mappings.
+            genes_to_disease_map (pl.DataFrame): DataFrame containing gene-to-disease mappings.
             gene_identifier_updater (GeneIdentifierUpdater): An instance of GeneIdentifierUpdater.
 
         Returns:
@@ -983,7 +979,7 @@ class PhenopacketInterpretationExtender:
         phenopacket_util = PhenopacketUtil(self.phenopacket)
         disease = phenopacket_util.return_phenopacket_disease()
         diagnosis = self.create_gene_diagnosis(
-            omim_disease_phenotype_gene_map, gene_identifier_updater, disease
+            genes_to_disease_map, gene_identifier_updater, disease
         )
         return (
             Interpretation(
@@ -997,7 +993,7 @@ class PhenopacketInterpretationExtender:
 
     def add_gene_interpretation_to_phenopacket(
         self,
-        omim_disease_phenotype_gene_map: pl.DataFrame,
+        genes_to_disease_map: pl.DataFrame,
         gene_identifier_updater: GeneIdentifierUpdater,
     ) -> Phenopacket:
         """
@@ -1006,7 +1002,7 @@ class PhenopacketInterpretationExtender:
         This method adds gene-based interpretations to a copy of the Phenopacket.
 
         Args:
-            omim_disease_phenotype_gene_map (pl.DataFrame): DataFrame containing gene-to-phenotype mappings.
+            genes_to_disease_map (pl.DataFrame): DataFrame containing gene-to-disease mappings.
             gene_identifier_updater (GeneIdentifierUpdater): An instance of GeneIdentifierUpdater.
 
         Returns:
@@ -1015,9 +1011,7 @@ class PhenopacketInterpretationExtender:
         """
         phenopacket_copy = copy(self.phenopacket)
         interpretations = [
-            self.create_gene_interpretation(
-                omim_disease_phenotype_gene_map, gene_identifier_updater
-            )
+            self.create_gene_interpretation(genes_to_disease_map, gene_identifier_updater)
         ]
         if interpretations is not None:
             phenopacket_copy.interpretations.extend(interpretations)
