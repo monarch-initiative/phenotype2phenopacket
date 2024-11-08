@@ -49,7 +49,12 @@ def create_synthetic_patient_phenopacket(
 
 
 def create_synthetic_patients(
-    phenotype_annotation: Path, num_disease: int, omim_id: str, omim_id_list: Path, output_dir: Path, local_cached_ontology: Path
+    phenotype_annotation: Path,
+    num_disease: int,
+    omim_id: str,
+    omim_id_list: Path,
+    output_dir: Path,
+    local_cached_ontology: Path,
 ):
     """
     Create a set of synthetic patient phenopackets from a phenotype annotation file.

@@ -64,7 +64,12 @@ from phenotype2phenopacket.convert.convert import convert_to_phenopackets
     type=Path,
 )
 def convert_to_phenopackets_command(
-    phenotype_annotation: Path, num_disease: int, omim_id: str, omim_id_list: Path, output_dir: Path, local_ontology_cache: Path
+    phenotype_annotation: Path,
+    num_disease: int,
+    omim_id: str,
+    omim_id_list: Path,
+    output_dir: Path,
+    local_ontology_cache: Path,
 ):
     """
     Convert a phenotype annotation file to a set of disease phenopackets.
@@ -78,4 +83,6 @@ def convert_to_phenopackets_command(
         local_ontology_cache (Path): Path to the local ontology cache.
     """
     output_dir.mkdir(exist_ok=True)
-    convert_to_phenopackets(phenotype_annotation, num_disease, omim_id, omim_id_list, output_dir, local_ontology_cache)
+    convert_to_phenopackets(
+        phenotype_annotation, num_disease, omim_id, omim_id_list, output_dir, local_ontology_cache
+    )

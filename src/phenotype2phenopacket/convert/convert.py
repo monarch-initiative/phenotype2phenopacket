@@ -12,8 +12,12 @@ from phenotype2phenopacket.utils.utils import (
 
 
 def convert_to_phenopackets(
-        phenotype_annotation: Path, num_disease: int, omim_id: str, omim_id_list: Path, output_dir: Path,
-        local_cached_ontology: Path
+    phenotype_annotation: Path,
+    num_disease: int,
+    omim_id: str,
+    omim_id_list: Path,
+    output_dir: Path,
+    local_cached_ontology: Path,
 ):
     """
     Convert a phenotype annotation file to a set of disease-specific phenopackets.

@@ -5,7 +5,7 @@ from typing import List
 
 import pandas as pd
 import polars as pl
-from oaklib import get_adapter, OntologyResource
+from oaklib import OntologyResource, get_adapter
 from oaklib.implementations import ProntoImplementation
 
 
@@ -204,10 +204,10 @@ def read_omim_id_list(omim_id_list_file_path: Path) -> List[str]:
 
 
 def filter_diseases(
-        num_disease: int,
-        omim_id: str,
-        omim_id_list: Path,
-        phenotype_annotation_data: PhenotypeAnnotation,
+    num_disease: int,
+    omim_id: str,
+    omim_id_list: Path,
+    phenotype_annotation_data: PhenotypeAnnotation,
 ) -> List[pl.DataFrame]:
     """
     Filter the phenotype annotation data to either only a specific disease, a specific number of diseases,
