@@ -12,7 +12,8 @@ from phenotype2phenopacket.utils.utils import (
 
 
 def convert_to_phenopackets(
-    phenotype_annotation: Path, num_disease: int, omim_id: str, omim_id_list: Path, output_dir: Path
+        phenotype_annotation: Path, num_disease: int, omim_id: str, omim_id_list: Path, output_dir: Path,
+        local_cached_ontology: Path
 ):
     """
     Convert a phenotype annotation file to a set of disease-specific phenopackets.
@@ -24,8 +25,9 @@ def convert_to_phenopackets(
         omim_id (str) : OMIM ID to generate synthetic patient phenopackets for.
         omim_id_list (Path) : Path to the list of OMIM IDs to generate synthetic patient phenopackets for.
         output_dir (Path): Directory path to write the generated phenopackets.
+        local_cached_ontology (Path): Path to the local cached ontology.
     """
-    human_phenotype_ontology = load_ontology()
+    human_phenotype_ontology = load_ontology(local_cached_ontology)
     phenotype_annotation_data = return_phenotype_annotation_data(phenotype_annotation)
     grouped_omim_diseases = filter_diseases(
         num_disease, omim_id, omim_id_list, phenotype_annotation_data

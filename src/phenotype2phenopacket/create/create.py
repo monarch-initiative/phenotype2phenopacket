@@ -49,7 +49,7 @@ def create_synthetic_patient_phenopacket(
 
 
 def create_synthetic_patients(
-    phenotype_annotation: Path, num_disease: int, omim_id: str, omim_id_list: Path, output_dir: Path
+    phenotype_annotation: Path, num_disease: int, omim_id: str, omim_id_list: Path, output_dir: Path, local_cached_ontology: Path
 ):
     """
     Create a set of synthetic patient phenopackets from a phenotype annotation file.
@@ -61,10 +61,11 @@ def create_synthetic_patients(
         omim_id (str) : OMIM ID to generate synthetic patient phenopackets for.
         omim_id_list (Path) : Path to the list of OMIM IDs to generate synthetic patient phenopackets for.
         output_dir (Path): Directory path to write the generated phenopackets.
+        local_cached_ontology (Path): Path to the local cached ontology.
 
     """
     phenotype_annotation_data = return_phenotype_annotation_data(phenotype_annotation)
-    human_phenotype_ontology = load_ontology()
+    human_phenotype_ontology = load_ontology(local_cached_ontology)
     grouped_omim_diseases = filter_diseases(
         num_disease, omim_id, omim_id_list, phenotype_annotation_data
     )
