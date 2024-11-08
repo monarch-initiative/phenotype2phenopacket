@@ -39,37 +39,6 @@ def read_genes_to_disease(genes_to_disease: Path) -> pl.DataFrame:
     return pl.read_csv(genes_to_disease, sep="\t")
 
 
-# def read_disease_pg(disease_pg: Path) -> pl.DataFrame:
-#     """
-#     Read a disease.pg file and return a filtered Polars DataFrame.
-#
-#     This function reads the contents of a 'disease.pg' file using Polars read_csv method
-#     and constructs a DataFrame. It filters the DataFrame to include only rows where the 'database_id'
-#     column starts with 'OMIM'.
-#
-#     Args:
-#         disease_pg (Path): The path to the 'disease.pg' file.
-#
-#     Returns:
-#         pl.DataFrame: A filtered Polars DataFrame containing specific columns and rows
-#                       where 'database_id' starts with 'OMIM'.
-#     """
-#     disease = pl.read_csv(
-#         disease_pg,
-#         separator="|",
-#         new_columns=[
-#             "database_id",
-#             "gene_mim_number",
-#             "disease_name",
-#             "entrez_id",
-#             "diagnosis_status",
-#             "inheritance",
-#         ],
-#         has_header=False,
-#     )
-#     return disease.filter(pl.col("database_id").str.starts_with("OMIM"))
-
-
 def load_ontology(local_cached_ontology: Path = None):
     """
     Load the Human Phenotype Ontology (HPO).
@@ -215,10 +184,10 @@ def read_omim_id_list(omim_id_list_file_path: Path) -> List[str]:
 
 
 def filter_diseases(
-    num_disease: int,
-    omim_id: str,
-    omim_id_list: Path,
-    phenotype_annotation_data: PhenotypeAnnotation,
+        num_disease: int,
+        omim_id: str,
+        omim_id_list: Path,
+        phenotype_annotation_data: PhenotypeAnnotation,
 ) -> List[pl.DataFrame]:
     """
     Filter the phenotype annotation data to either only a specific disease, a specific number of diseases,
