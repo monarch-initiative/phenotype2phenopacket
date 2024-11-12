@@ -58,7 +58,7 @@ def add_genes(
         phenopacket_with_genes = PhenopacketInterpretationExtender(
             phenopacket
         ).add_gene_interpretation_to_phenopacket(
-            omim_disease_phenotype_gene_map=filtered_genes_to_disease,
+            genes_to_disease_map=filtered_genes_to_disease,
             gene_identifier_updater=gene_identifier_updater,
         )
         (
