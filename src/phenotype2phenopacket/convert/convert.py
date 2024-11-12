@@ -39,7 +39,7 @@ def convert_to_phenopackets(
     for omim_disease in grouped_omim_diseases:
         phenopacket_file = PhenotypeAnnotationToPhenopacketConverter(
             human_phenotype_ontology
-        ).create_phenopacket(omim_disease, phenotype_annotation_data.version)
+        ).create_phenopacket(omim_disease, phenotype_annotation_data.version, None)
         write_phenopacket(
             phenopacket_file.phenopacket, output_dir.joinpath(phenopacket_file.phenopacket_path)
         )
