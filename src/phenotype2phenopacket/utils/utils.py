@@ -36,7 +36,7 @@ def read_genes_to_disease(genes_to_disease: Path) -> pl.DataFrame:
     Returns:
         pl.DataFrame: A  Polars DataFrame containing the contents of the genes_to_disease.txt.
     """
-    return pl.read_csv(genes_to_disease, sep="\t")
+    return pl.read_csv(genes_to_disease, separator="\t")
 
 
 def load_ontology(local_cached_ontology: Path = None):
