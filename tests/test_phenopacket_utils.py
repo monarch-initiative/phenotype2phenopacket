@@ -3,6 +3,13 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import polars as pl
+from pheval.utils.phenopacket_utils import (
+    GeneIdentifierUpdater,
+    create_gene_identifier_map,
+    create_hgnc_dict,
+)
+from polars.testing import assert_frame_equal
+
 from phenopackets import (
     Age,
     Diagnosis,
@@ -19,13 +26,6 @@ from phenopackets import (
     Resource,
     TimeElement,
 )
-from pheval.utils.phenopacket_utils import (
-    GeneIdentifierUpdater,
-    create_gene_identifier_map,
-    create_hgnc_dict,
-)
-from polars.testing import assert_frame_equal
-
 from phenotype2phenopacket.utils.phenopacket_utils import (
     OnsetTerm,
     PhenopacketInterpretationExtender,
