@@ -68,25 +68,19 @@ def add_genes(
         )
 
 
-def add_genes_to_directory(
-        phenopacket_dir: Path,
-        genes_to_disease: pl.DataFrame,
-        gene_identifier: str,
-        output_dir: Path,
-):
+def add_genes_to_directory(phenopacket_dir: Path, genes_to_disease: pl.DataFrame, output_dir: Path):
     """
     Add known gene-to-phenotype relationships to the interpretations of a directory of phenopackets.
 
     Args:
         phenopacket_dir (Path): Directory containing the phenopacket files.
         genes_to_disease (pl.DataFrame): DataFrame containing genes_to_disease.txt entries.
-        gene_identifier (str): Gene identifier for the phenopacket.
         output_dir (Path): Directory to store the updated phenopackets.
     """
     hgnc_dict = create_hgnc_dict()
     identifier_map = create_gene_identifier_map()
     gene_identifier_updater = GeneIdentifierUpdater(
-        gene_identifier=gene_identifier, hgnc_data=hgnc_dict, identifier_map=identifier_map
+        gene_identifier="ensembl_id", hgnc_data=hgnc_dict, identifier_map=identifier_map
     )
     for phenopacket_path in all_files(phenopacket_dir):
         add_genes(phenopacket_path, genes_to_disease, gene_identifier_updater, output_dir)

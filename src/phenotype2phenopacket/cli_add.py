@@ -28,17 +28,9 @@ from phenotype2phenopacket.utils.utils import read_genes_to_disease
     help="Path to output directory.",
     type=Path,
 )
-@click.option(
-    "--gene-identifier",
-    "-g",
-    required=False,
-    help="Gene identifier to update in phenopacket",
-    type=click.Choice(["ensembl_id", "entrez_id", "hgnc_id"]),
-)
 def add_genes_command(
     phenopacket_dir: Path,
     genes_to_disease: Path,
-    gene_identifier: str,
     output_dir: Path,
 ):
     """
@@ -47,7 +39,6 @@ def add_genes_command(
     Args:
         phenopacket_dir (Path): Directory containing the phenopacket files.
         genes_to_disease (Path): Path to the genes_to_disease.txt file.
-        gene_identifier (str): Gene identifier to add in phenopacket
         output_dir (Path): Directory to store the updated phenopackets.
     """
     output_dir.mkdir(exist_ok=True)
@@ -55,6 +46,5 @@ def add_genes_command(
     add_genes_to_directory(
         phenopacket_dir,
         genes_to_disease_df,
-        gene_identifier,
         output_dir,
     )
