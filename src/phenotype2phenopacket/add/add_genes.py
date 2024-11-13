@@ -69,10 +69,10 @@ def add_genes(
 
 
 def add_genes_to_directory(
-        phenopacket_dir: Path,
-        genes_to_disease: pl.DataFrame,
-        gene_identifier: str,
-        output_dir: Path,
+    phenopacket_dir: Path,
+    genes_to_disease: pl.DataFrame,
+    gene_identifier: str,
+    output_dir: Path,
 ):
     """
     Add known gene-to-phenotype relationships to the interpretations of a directory of phenopackets.
