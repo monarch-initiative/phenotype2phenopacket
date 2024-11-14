@@ -30,7 +30,7 @@ from phenotype2phenopacket.utils.utils import read_genes_to_disease
 )
 @click.option(
     "--gene-identifier",
-    "-g",
+    "-i",
     required=False,
     help="Gene identifier to update in phenopacket",
     type=click.Choice(["ensembl_id", "entrez_id", "hgnc_id"]),
