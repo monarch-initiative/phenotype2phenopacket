@@ -56,7 +56,7 @@ from phenotype2phenopacket.create.create import create_synthetic_patients
 )
 @click.option(
     "--local-ontology-cache",
-    "-l",
+    "-c",
     metavar="PATH",
     required=False,
     help="Path to the local ontology cache, e.g., path to the hp.obo.",
