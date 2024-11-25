@@ -56,7 +56,7 @@ from phenotype2phenopacket.convert.convert import convert_to_phenopackets
 )
 @click.option(
     "--local-ontology-cache",
-    "-l",
+    "-c",
     metavar="PATH",
     required=False,
     help="Path to the local ontology cache, e.g., path to the hp.obo.",

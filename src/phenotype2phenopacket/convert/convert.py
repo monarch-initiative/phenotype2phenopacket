@@ -7,6 +7,7 @@ from phenotype2phenopacket.utils.phenopacket_utils import (
 from phenotype2phenopacket.utils.utils import (
     filter_diseases,
     load_ontology,
+    read_omim_id_list,
     return_phenotype_annotation_data,
 )
 
@@ -36,7 +37,10 @@ def convert_to_phenopackets(
     grouped_omim_diseases = filter_diseases(
         num_disease, omim_id, omim_id_list, phenotype_annotation_data
     )
-    for omim_disease in grouped_omim_diseases:
+    for omim_id, omim_disease in zip(read_omim_id_list(omim_id_list), grouped_omim_diseases):
+        if len(omim_disease) == 0:
+            print(f"Skipping... Could not find any phenotype entries for {omim_id}!")
+            continue
         phenopacket_file = PhenotypeAnnotationToPhenopacketConverter(
             human_phenotype_ontology
         ).create_phenopacket(omim_disease, phenotype_annotation_data.version, None)
