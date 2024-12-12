@@ -37,7 +37,9 @@ def convert_to_phenopackets(
     grouped_omim_diseases = filter_diseases(
         num_disease, omim_id, omim_id_list, phenotype_annotation_data
     )
-    omim_ids = read_omim_id_list(omim_id_list) if omim_id_list else [None] * len(grouped_omim_diseases)
+    omim_ids = (
+        read_omim_id_list(omim_id_list) if omim_id_list else [None] * len(grouped_omim_diseases)
+    )
     for omim_id, omim_disease in zip(omim_ids, grouped_omim_diseases):
         if len(omim_disease) == 0:
             id_message = f" for {omim_id}!" if omim_id else "!"
