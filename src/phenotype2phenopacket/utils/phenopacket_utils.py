@@ -653,14 +653,15 @@ class PhenotypeAnnotationToPhenopacketConverter:
                                           otherwise returns None.
         """
         if phenotype_annotation_entry["modifier"] is not None:
-            try:
-                rels = self.human_phenotype_ontology.entity_alias_map(
-                    phenotype_annotation_entry["modifier"]
-                )
-                term = "".join(rels[(list(rels.keys())[0])])
-                return [OntologyClass(id=phenotype_annotation_entry["modifier"], label=term)]
-            except IndexError:
-                return [OntologyClass(id=phenotype_annotation_entry["modifier"])]
+            ontology_class = []
+            for modifier in list(set(phenotype_annotation_entry["modifier"].split(";"))):
+                try:
+                    rels = self.human_phenotype_ontology.entity_alias_map(modifier)
+                    term = "".join(rels[(list(rels.keys())[0])])
+                    ontology_class.append(OntologyClass(id=modifier, label=term))
+                except IndexError:
+                    ontology_class.append(OntologyClass(id=modifier))
+            return ontology_class
         else:
             return None
 
