@@ -682,7 +682,7 @@ class PhenotypeAnnotationToPhenopacketConverter:
             rels = self.human_phenotype_ontology.entity_alias_map(
                 phenotype_annotation_entry["hpo_id"]
             )
-            hpo_term = "".join(rels[(list(rels.keys())[0])])
+            hpo_term = "".join(rels[(list(rels.keys())[0])]) if rels else None
             return PhenotypicFeature(
                 type=OntologyClass(id=phenotype_annotation_entry["hpo_id"], label=hpo_term),
                 onset=self.create_onset(phenotype_annotation_entry),
