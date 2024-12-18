@@ -821,7 +821,7 @@ class PhenotypeAnnotationToPhenopacketConverter:
                 meta_data=self.create_metadata(hpoa_version),
             ),
             phenopacket_path=create_phenopacket_file_name_from_disease(
-                phenotype_annotation_entry["disease_name"]
+                phenotype_annotation_entry["database_id"]
             ),
         )
 
