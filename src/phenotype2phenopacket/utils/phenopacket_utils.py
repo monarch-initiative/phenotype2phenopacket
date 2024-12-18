@@ -473,17 +473,17 @@ class SyntheticPatientGenerator:
         """
         term_id = phenotype_entry["hpo_id"]
         rels = self.ontology.entity_alias_map(term_id)
-        term = "".join(rels[(list(rels.keys())[0])])
+        term = "".join(rels[(list(rels.keys())[0])]) if rels else ""
         if term.startswith("Abnormality of"):
             return phenotype_entry
         for _i in range(steps):
             parents = self.ontology.hierarchical_parents(term_id)
             if not parents:
-                warnings.warn(f"No parents found for term {term}", stacklevel=2)
+                warnings.warn(f"No parents found for term {term_id}", stacklevel=2)
                 return phenotype_entry
             parent = self.secret_rand.choice(parents)
             rels = self.ontology.entity_alias_map(parent)
-            term = "".join(rels[(list(rels.keys())[0])])
+            term = "".join(rels[(list(rels.keys())[0])]) if rels else ""
             if (
                 term.startswith("Abnormality of")
                 or term_id == "HP:0000118"
@@ -632,7 +632,7 @@ class PhenotypeAnnotationToPhenopacketConverter:
             rels = self.human_phenotype_ontology.entity_alias_map(
                 phenotype_annotation_entry["onset"]
             )
-            term = "".join(rels[(list(rels.keys())[0])])
+            term = "".join(rels[(list(rels.keys())[0])]) if rels else None
             return TimeElement(
                 ontology_class=OntologyClass(id=phenotype_annotation_entry["onset"], label=term)
             )
