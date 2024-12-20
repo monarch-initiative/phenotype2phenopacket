@@ -11,7 +11,8 @@ from phenotype2phenopacket.utils.phenopacket_utils import (
 from phenotype2phenopacket.utils.utils import (
     filter_diseases,
     load_ontology,
-    return_phenotype_annotation_data, read_omim_id_list,
+    read_omim_id_list,
+    return_phenotype_annotation_data,
 )
 
 
