@@ -366,9 +366,9 @@ class SyntheticPatientGenerator:
             if len(self.filtered_df) == 0:
                 return frequency_df.sample(n=max_number)
             else:
-                return pl.from_dicts(self.filtered_df)
+                return pl.from_dicts(self.filtered_df, infer_schema_length=len(self.filtered_df))
         else:
-            return pl.from_dicts(self.filtered_df)
+            return pl.from_dicts(self.filtered_df, infer_schema_length=len(self.filtered_df))
 
     def get_patient_terms(self) -> pl.DataFrame:
         """
@@ -570,7 +570,7 @@ class SyntheticPatientGenerator:
             patient_terms, patient_terms_sub_sample
         )
         final_patient_terms = patient_terms_filtered.to_dicts() + new_phenotype_terms
-        return pl.from_dicts(final_patient_terms)
+        return pl.from_dicts(final_patient_terms, infer_schema_length=len(final_patient_terms))
 
 
 class PhenotypeAnnotationToPhenopacketConverter:
