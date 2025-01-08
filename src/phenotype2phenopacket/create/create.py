@@ -11,6 +11,7 @@ from phenotype2phenopacket.utils.phenopacket_utils import (
 from phenotype2phenopacket.utils.utils import (
     filter_diseases,
     load_ontology,
+    read_omim_id_list,
     return_phenotype_annotation_data,
 )
 
@@ -74,7 +75,14 @@ def create_synthetic_patients(
     grouped_omim_diseases = filter_diseases(
         num_disease, omim_id, omim_id_list, phenotype_annotation_data
     )
-    for omim_disease in grouped_omim_diseases:
+    omim_ids = (
+        read_omim_id_list(omim_id_list) if omim_id_list else [None] * len(grouped_omim_diseases)
+    )
+    for omim_id, omim_disease in zip(omim_ids, grouped_omim_diseases):
+        if len(omim_disease) == 0:
+            id_message = f" for {omim_id}!" if omim_id else "!"
+            print(f"Skipping... Could not find any phenotype entries{id_message}")
+            continue
         create_synthetic_patient_phenopacket(
             human_phenotype_ontology,
             omim_disease,
