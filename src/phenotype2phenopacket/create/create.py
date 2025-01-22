@@ -5,11 +5,16 @@ import polars as pl
 from oaklib.implementations import ProntoImplementation
 
 from phenotype2phenopacket.utils.phenopacket_utils import (
-    PhenotypeAnnotationToPhenopacketConverter, SyntheticPatientGenerator,
-    write_phenopacket)
+    PhenotypeAnnotationToPhenopacketConverter,
+    SyntheticPatientGenerator,
+    write_phenopacket,
+)
 from phenotype2phenopacket.utils.utils import (
-    filter_diseases, load_ontology, read_omim_id_list,
-    return_phenotype_annotation_data)
+    filter_diseases,
+    load_ontology,
+    read_omim_id_list,
+    return_phenotype_annotation_data,
+)
 
 
 def _get_terms_for_randomisation(
@@ -23,8 +28,7 @@ def _get_terms_for_randomisation(
     descendents = set(human_phenotype_ontology.descendants("HP:0000118"))
     descendents.discard("HP:0000118")
     direct_children = {
-        term[1]
-        for term in set(human_phenotype_ontology.incoming_relationships("HP:0000118"))
+        term[1] for term in set(human_phenotype_ontology.incoming_relationships("HP:0000118"))
     }
     return list(descendents - direct_children)
 
@@ -94,9 +98,7 @@ def create_synthetic_patients(
         num_disease, omim_id, omim_id_list, phenotype_annotation_data
     )
     omim_ids = (
-        read_omim_id_list(omim_id_list)
-        if omim_id_list
-        else [None] * len(grouped_omim_diseases)
+        read_omim_id_list(omim_id_list) if omim_id_list else [None] * len(grouped_omim_diseases)
     )
     for omim_id, omim_disease in zip(omim_ids, grouped_omim_diseases):
         if len(omim_disease) == 0:
