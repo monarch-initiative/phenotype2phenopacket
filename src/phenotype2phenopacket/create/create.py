@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import List
 
 import polars as pl
 from oaklib.implementations import ProntoImplementation
@@ -16,12 +17,29 @@ from phenotype2phenopacket.utils.utils import (
 )
 
 
+def _get_terms_for_randomisation(
+    human_phenotype_ontology: ProntoImplementation,
+) -> List[str]:
+    """
+    Get the terms for randomisation.
+    Returns:
+        Set[str]: A set of terms for randomisation.
+    """
+    descendents = set(human_phenotype_ontology.descendants("HP:0000118"))
+    descendents.discard("HP:0000118")
+    direct_children = {
+        term[1] for term in set(human_phenotype_ontology.incoming_relationships("HP:0000118"))
+    }
+    return list(descendents - direct_children)
+
+
 def create_synthetic_patient_phenopacket(
     human_phenotype_ontology: ProntoImplementation,
     omim_disease: pl.DataFrame,
     output_dir: Path,
     pt_id: str,
     hpoa_version: str,
+    random_terms: List[str],
 ):
     """
     Create a synthetic patient phenopacket from a set of phenotype entries for a specific OMIM disease.
@@ -34,7 +52,9 @@ def create_synthetic_patient_phenopacket(
         hpoa_version (str): The version of the Human Phenotype Ontology Annotation.
 
     """
-    synthetic_patient_generator = SyntheticPatientGenerator(omim_disease, human_phenotype_ontology)
+    synthetic_patient_generator = SyntheticPatientGenerator(
+        omim_disease, human_phenotype_ontology, random_terms
+    )
     patient_terms = synthetic_patient_generator.patient_term_annotation_set()
     phenopacket_file = PhenotypeAnnotationToPhenopacketConverter(
         human_phenotype_ontology
@@ -45,7 +65,8 @@ def create_synthetic_patient_phenopacket(
         onset=synthetic_patient_generator.get_onset_range(),
     )
     write_phenopacket(
-        phenopacket_file.phenopacket, output_dir.joinpath(phenopacket_file.phenopacket_path)
+        phenopacket_file.phenopacket,
+        output_dir.joinpath(phenopacket_file.phenopacket_path),
     )
 
 
@@ -72,6 +93,7 @@ def create_synthetic_patients(
     """
     phenotype_annotation_data = return_phenotype_annotation_data(phenotype_annotation)
     human_phenotype_ontology = load_ontology(local_cached_ontology)
+    random_terms = _get_terms_for_randomisation(human_phenotype_ontology)
     grouped_omim_diseases = filter_diseases(
         num_disease, omim_id, omim_id_list, phenotype_annotation_data
     )
@@ -89,4 +111,5 @@ def create_synthetic_patients(
             output_dir,
             None,
             phenotype_annotation_data.version,
+            random_terms,
         )
