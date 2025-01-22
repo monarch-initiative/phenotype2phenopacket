@@ -2,7 +2,7 @@ import re
 import secrets
 import threading
 import warnings
-from copy import copy
+from copy import copy, deepcopy
 from dataclasses import dataclass
 from fractions import Fraction
 from pathlib import Path
@@ -11,6 +11,8 @@ from typing import List, Union
 import polars as pl
 from google.protobuf.timestamp_pb2 import Timestamp
 from oaklib.implementations import ProntoImplementation
+from pheval.utils.phenopacket_utils import GeneIdentifierUpdater, create_json_message
+
 from phenopackets import (
     Age,
     Diagnosis,
@@ -26,8 +28,6 @@ from phenopackets import (
     Resource,
     TimeElement,
 )
-from pheval.utils.phenopacket_utils import GeneIdentifierUpdater, create_json_message
-
 from phenotype2phenopacket.utils.utils import is_float
 
 
@@ -149,7 +149,12 @@ def write_phenopacket(phenopacket: Phenopacket, output_file: Path) -> None:
 class SyntheticPatientGenerator:
     """Class for generating synthetic patients."""
 
-    def __init__(self, disease_df: pl.DataFrame, ontology: ProntoImplementation):
+    def __init__(
+        self,
+        disease_df: pl.DataFrame,
+        ontology: ProntoImplementation,
+        random_terms: List[str] = None,
+    ):
         """
         Initialise the SyntheticPatientGenerator class
 
@@ -164,6 +169,7 @@ class SyntheticPatientGenerator:
         self.upper_age = 0
         self.filtered_df = []
         self.secret_rand = secrets.SystemRandom()
+        self.random_terms = random_terms
 
     def get_number_of_terms(self) -> int:
         """
@@ -486,8 +492,8 @@ class SyntheticPatientGenerator:
             term = "".join(rels[(list(rels.keys())[0])]) if rels else ""
             if (
                 term.startswith("Abnormality of")
-                or term_id == "HP:0000118"
-                or term_id == "HP:0032443"
+                or parent == "HP:0000118"
+                or parent == "HP:0032443"
             ):
                 break
             else:
@@ -545,6 +551,40 @@ class SyntheticPatientGenerator:
             )
         return new_phenotype_terms
 
+    def calculate_number_of_randomised_terms(self, num_terms: int) -> int:
+        """
+        Calculate the number of terms to randomise.
+        Args:
+            num_terms: The total number of terms.
+
+        Returns:
+            int: Number of terms to randomise.
+
+        """
+        return round(num_terms * 0.33 * self.secret_rand.uniform(0, 1))
+
+    def randomised_terms(self, num_terms: int, template_dict: dict) -> List[dict]:
+        """
+        Create randomised terms from a template.
+        Args:
+            num_terms: The total number of terms.
+            template_dict: The template dictionary.
+        Returns:
+            List[dict]: List of randomised terms.
+        """
+        num_terms_to_randomise = self.calculate_number_of_randomised_terms(num_terms)
+        random_terms_subset = self.secret_rand.choices(self.random_terms, k=num_terms_to_randomise)
+        return [
+            {
+                **deepcopy(template_dict),
+                "hpo_id": random_term,
+                "modifier": None,
+                "sex": None,
+                "onset": None,
+            }
+            for random_term in random_terms_subset
+        ]
+
     def patient_term_annotation_set(self) -> pl.DataFrame:
         """
         Get the final patient term annotation set.
@@ -569,7 +609,10 @@ class SyntheticPatientGenerator:
         patient_terms_filtered = self.remove_terms_to_be_randomised(
             patient_terms, patient_terms_sub_sample
         )
-        final_patient_terms = patient_terms_filtered.to_dicts() + new_phenotype_terms
+        altered_patient_terms = patient_terms_filtered.to_dicts() + new_phenotype_terms
+        final_patient_terms = altered_patient_terms + self.randomised_terms(
+            len(altered_patient_terms), altered_patient_terms[0]
+        )
         return pl.from_dicts(final_patient_terms, infer_schema_length=len(final_patient_terms))
 
 
