@@ -835,6 +835,7 @@ class PhenotypeAnnotationToPhenopacketConverter:
         omim_disease_df: pl.DataFrame,
         hpoa_version: str,
         pt_id: str,
+        skip_phenotypic_features: bool,
         onset: OnsetTerm = None,
     ) -> PhenopacketFile:
         """
@@ -853,7 +854,7 @@ class PhenotypeAnnotationToPhenopacketConverter:
             PhenopacketFile: A class instance containing the phenopacket file name and
             the generated Phenopacket.
         """
-        phenotypic_features = self.create_phenotypic_features(omim_disease_df)
+        phenotypic_features = [] if skip_phenotypic_features else self.create_phenotypic_features(omim_disease_df) 
         phenotype_annotation_entry = omim_disease_df.to_dicts()[0]
         return PhenopacketFile(
             phenopacket=Phenopacket(
