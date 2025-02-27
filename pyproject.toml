@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "phenotype2phenopacket"
-version = "0.6.13"
+version = "0.6.14"
 description = ""
 authors = ["Yasemin Bridges <y.bridges@qmul.ac.uk>"]
 readme = "README.md"
