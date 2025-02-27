@@ -19,6 +19,11 @@ To convert all OMIM diseases in a phenotype annotation file to disease phenopack
 p2p convert --phenotype-annotation /path/to/phenotype.hpoa --output-dir /path/to/output-dir
 ```
 
+To convert all OMIM diseases in a phenotype annotation file to lightweight disease phenopackets (without phenotypic features):
+```shell
+p2p convert --phenotype-annotation /path/to/phenotype.hpoa --output-dir /path/to/output-dir --skip-phenotypic-features
+```
+
 To create synthetic patient disease phenopackets, where the dataset is more variable and frequencies are taken
 into account and constrained noise is applied :
 

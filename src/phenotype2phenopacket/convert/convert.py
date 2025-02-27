@@ -19,6 +19,7 @@ def convert_to_phenopackets(
     omim_id_list: Path,
     output_dir: Path,
     local_cached_ontology: Path,
+    skip_phenotypic_features: bool,
 ):
     """
     Convert a phenotype annotation file to a set of disease-specific phenopackets.
@@ -47,7 +48,9 @@ def convert_to_phenopackets(
             continue
         phenopacket_file = PhenotypeAnnotationToPhenopacketConverter(
             human_phenotype_ontology
-        ).create_phenopacket(omim_disease, phenotype_annotation_data.version, None)
+        ).create_phenopacket(
+            omim_disease, phenotype_annotation_data.version, None, skip_phenotypic_features
+        )
         write_phenopacket(
             phenopacket_file.phenopacket, output_dir.joinpath(phenopacket_file.phenopacket_path)
         )

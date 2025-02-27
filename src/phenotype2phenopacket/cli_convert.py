@@ -63,6 +63,14 @@ from phenotype2phenopacket.convert.convert import convert_to_phenopackets
     default=None,
     type=Path,
 )
+@click.option(
+    "--skip-phenotypic-features",
+    "-s",
+    is_flag=True,
+    default=False,
+    required=False,
+    help="Boolean flag to skip writing phenotypic features to phenopacket.",
+)
 def convert_to_phenopackets_command(
     phenotype_annotation: Path,
     num_disease: int,
@@ -70,6 +78,7 @@ def convert_to_phenopackets_command(
     omim_id_list: Path,
     output_dir: Path,
     local_ontology_cache: Path,
+    skip_phenotypic_features: bool,
 ):
     """
     Convert a phenotype annotation file to a set of disease phenopackets.
@@ -84,5 +93,11 @@ def convert_to_phenopackets_command(
     """
     output_dir.mkdir(exist_ok=True)
     convert_to_phenopackets(
-        phenotype_annotation, num_disease, omim_id, omim_id_list, output_dir, local_ontology_cache
+        phenotype_annotation,
+        num_disease,
+        omim_id,
+        omim_id_list,
+        output_dir,
+        local_ontology_cache,
+        skip_phenotypic_features,
     )
