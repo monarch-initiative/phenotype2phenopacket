@@ -6,7 +6,6 @@ from pheval.utils.file_utils import all_files
 from pheval.utils.phenopacket_utils import (
     GeneIdentifierUpdater,
     create_gene_identifier_map,
-    create_hgnc_dict,
     phenopacket_reader,
 )
 
@@ -83,10 +82,9 @@ def add_genes_to_directory(
         gene_identifier (str): Gene identifier for the phenopacket.
         output_dir (Path): Directory to store the updated phenopackets.
     """
-    hgnc_dict = create_hgnc_dict()
     identifier_map = create_gene_identifier_map()
     gene_identifier_updater = GeneIdentifierUpdater(
-        gene_identifier=gene_identifier, hgnc_data=hgnc_dict, identifier_map=identifier_map
+        gene_identifier=gene_identifier, identifier_map=identifier_map
     )
     for phenopacket_path in all_files(phenopacket_dir):
         add_genes(phenopacket_path, genes_to_disease, gene_identifier_updater, output_dir)
