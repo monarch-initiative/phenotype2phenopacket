@@ -81,7 +81,7 @@ def read_phenotype_annotation_file(phenotype_annotation_file_path: Path) -> pl.D
     Returns:
         pl.DataFrame: A Polars DataFrame containing the contents of the phenotype annotation file.
     """
-    return pl.read_csv(phenotype_annotation_file_path, separator="\t", comment_char="#")
+    return pl.read_csv(phenotype_annotation_file_path, separator="\t", comment_prefix="#")
 
 
 def filter_phenotype_annotation(phenotype_annotation_file_path: Path) -> pl.DataFrame:
