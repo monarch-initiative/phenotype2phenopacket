@@ -1,6 +1,6 @@
 [project]
 name = "phenotype2phenopacket"
-version = "0.6.17"
+version = "0.6.18"
 description = ""
 authors = [{ name = "Yasemin Bridges", email = "y.bridges@qmul.ac.uk" }]
 requires-python = ">=3.10,<4.0"

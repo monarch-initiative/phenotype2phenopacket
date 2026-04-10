@@ -2122,7 +2122,7 @@ wheels = [
 
 [[package]]
 name = "phenotype2phenopacket"
-version = "0.6.16"
+version = "0.6.18"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
