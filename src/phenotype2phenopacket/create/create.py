@@ -63,6 +63,7 @@ def create_synthetic_patient_phenopacket(
         hpoa_version=hpoa_version,
         pt_id=pt_id,
         onset=synthetic_patient_generator.get_onset_range(),
+        skip_phenotypic_features=False,
     )
     write_phenopacket(
         phenopacket_file.phenopacket,
